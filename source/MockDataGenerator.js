@@ -1,0 +1,156 @@
+const mockData = require('./mockRequestBody');
+const RandExp = require('randexp');
+const faker = require('faker');
+const logger = require('../config/log');
+const jsonFieldsAtLevel = require('../utils/jsonFieldsAtLevel');
+const getRandomNumber = require('../utils/getRandomNumber');
+const getRandomString = require('../utils/getRandomString');
+
+function getMockInteger(schema, identifier) {
+  const low = schema.minimum;
+  const high = schema.maximum;
+  return getRandomNumber(low, high, {returnInteger: true});
+}
+
+// Number Datatype includes both integer and float values.
+function getMockNumber(schema, identifier) {
+  const low = schema.minimum;
+  const high = schema.maximum;
+
+  // Precision should be taken care with respect to the bounds set.
+  return getRandomNumber(low, high);
+}
+
+function getMockString(schema, identifier) {
+  // No support for combined condns.
+  if (schema.format) {
+    switch (schema.format) {
+      case 'email': {
+        const randomEmail = faker.internet.email();
+        return randomEmail;
+      }
+      case 'uuid': {
+        const randomUUID = faker.random.uuid();
+        return randomUUID;
+      }
+      case 'uri': {
+        const randomURI = faker.internet.url();
+        return randomURI;
+      }
+      case 'ipv4': {
+        const randomIPv4 = faker.internet.ip();
+        return randomIPv4;
+      }
+      case 'ipv6': {
+        const randomIPv6 = faker.internet.ipv6();
+        return randomIPv6;
+      }
+      default: {
+        const errorInfo = {
+          errorType: 'Limited Support Error',
+          errorDetails: {
+            key: identifier,
+            format: schema.format,
+            supportedFormats: 'email, uuid, uri, ipv4/ipv6',
+          },
+        };
+        logger['debug'](errorInfo);
+        return '';
+      }
+    }
+  }
+
+  if (schema.pattern) {
+    try {
+      const regex = new RegExp(schema.pattern);
+      return new RandExp(regex).gen();
+    } catch (err) {
+      logger['debug'](err);
+      return '';
+    }
+  }
+
+  const low = schema.minLength || 1;
+  const high = schema.maxLength || low + 10;
+  // Constants like 10 has to be moved into Constants Folder.
+
+  const lengthOfString = getRandomNumber(low, high, {returnInteger: true});
+  return getRandomString(lengthOfString);
+}
+
+function getMockArray(schema, identifier) {
+  // We don't support any-type array.
+  // Check for mixed-Type array.
+  const result = [];
+  const lengthOfArray = getRandomNumber(1, 10, {returnInteger: true});
+  // Constanats have to be moved to CONSTANTS file.
+
+  for (let index = 0; index < lengthOfArray; index++) {
+    result.push(mockData(schema.items, identifier));
+  }
+  return result;
+}
+
+function getMockObject(schema, identifier) {
+  const result = {};
+  const properties = jsonFieldsAtLevel(schema.properties, 1);
+  for (let index = 0; index < properties.length; index++) {
+    const property = properties[index];
+    const propertySchema = schema.properties[property];
+    result[property] = mockData(propertySchema, identifier + '.' + property);
+  }
+  return result;
+}
+function getMockData(schema, identifier) {
+  if (!schema) {
+    return undefined;
+  }
+
+  if (schema.oneOf) {
+    const items = schema.oneOf;
+    return mockData(
+        items[Math.floor(Math.random() * items.length)], identifier);
+  }
+
+  if (schema.enum) {
+    const items = schema.enum;
+    return items[Math.floor(Math.random() * items.length)];
+  }
+  switch (schema.type) {
+    case 'boolean':
+      return [true, false][Math.floor(Math.random() * 2)];
+    case 'integer':
+      return getMockInteger(schema, identifier);
+    case 'number':
+      return getMockNumber(schema, identifier);
+    case 'string':
+      return getMockString(schema, identifier);
+    case 'array':
+      return getMockArray(schema, identifier);
+    case 'object':
+      return getMockObject(schema, identifier);
+    default:
+      logger['error'](`No support for ${schema.type}`);
+  }
+}
+
+function getMockHeaders(parameters) {
+  const headers = {};
+  parameters = parameters || [];
+  for (let index = 0; index < parameters.length; index++) {
+    const parameter = parameters[index];
+    if (parameter.in === 'header') {
+      headers[parameter['name']] = getMockData(parameter['schema']);
+    }
+  }
+  return headers;
+}
+
+function getMockRequestBody(schema) {
+  return getMockData(schema);
+}
+
+module.exports = {
+  getMockHeaders,
+  getMockRequestBody,
+};
