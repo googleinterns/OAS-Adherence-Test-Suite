@@ -1,28 +1,28 @@
-const mockData = require('./mockRequestBody');
 const RandExp = require('randexp');
 const faker = require('faker');
-const logger = require('../config/log');
-const jsonFieldsAtLevel = require('../utils/jsonFieldsAtLevel');
-const getRandomNumber = require('../utils/getRandomNumber');
-const getRandomString = require('../utils/getRandomString');
+const {logger} = require('./Logger');
+const {
+  getRandomNumber,
+  getRandomString,
+  getJsonFieldsAtLevel,
+} = require('./Util');
 
-function getMockInteger(schema, identifier) {
+function getMockInteger(schema) {
   const low = schema.minimum;
   const high = schema.maximum;
   return getRandomNumber(low, high, {returnInteger: true});
 }
 
-// Number Datatype includes both integer and float values.
-function getMockNumber(schema, identifier) {
+// Number Datatype supports both integer and float values.
+function getMockNumber(schema) {
   const low = schema.minimum;
   const high = schema.maximum;
-
-  // Precision should be taken care with respect to the bounds set.
   return getRandomNumber(low, high);
 }
 
 function getMockString(schema, identifier) {
-  // No support for combined condns.
+  // No support for combined conditions.
+  // Include the priority list of keywords in jsDoc.
   if (schema.format) {
     switch (schema.format) {
       case 'email': {
@@ -54,7 +54,7 @@ function getMockString(schema, identifier) {
             supportedFormats: 'email, uuid, uri, ipv4/ipv6',
           },
         };
-        logger['debug'](errorInfo);
+        logger['info'](errorInfo);
         return '';
       }
     }
@@ -65,7 +65,8 @@ function getMockString(schema, identifier) {
       const regex = new RegExp(schema.pattern);
       return new RandExp(regex).gen();
     } catch (err) {
-      logger['debug'](err);
+      logger['info'](`Invalid Schema Pattern - ${schema.pattern}`);
+      logger['error'](err);
       return '';
     }
   }
@@ -80,42 +81,43 @@ function getMockString(schema, identifier) {
 
 function getMockArray(schema, identifier) {
   // We don't support any-type array.
-  // Check for mixed-Type array.
-  const result = [];
-  const lengthOfArray = getRandomNumber(1, 10, {returnInteger: true});
+  const mockArray = [];
+  const lengthOfMockArray = getRandomNumber(1, 10, {returnInteger: true});
   // Constanats have to be moved to CONSTANTS file.
 
-  for (let index = 0; index < lengthOfArray; index++) {
-    result.push(mockData(schema.items, identifier));
+  for (let index = 0; index < lengthOfMockArray; index++) {
+    mockArray.push(getMockData(schema.items, identifier));
   }
-  return result;
+  return mockArray;
 }
+
 
 function getMockObject(schema, identifier) {
-  const result = {};
-  const properties = jsonFieldsAtLevel(schema.properties, 1);
-  for (let index = 0; index < properties.length; index++) {
-    const property = properties[index];
-    const propertySchema = schema.properties[property];
-    result[property] = mockData(propertySchema, identifier + '.' + property);
-  }
-  return result;
+  const mockObject = {};
+  const keys = getJsonFieldsAtLevel(schema.properties, 1);
+  keys.forEach(function(key) {
+    const keySchema = schema.properties[key];
+    mockObject[key] =
+      getMockData(keySchema, identifier + '.' + key);
+  });
+  return mockObject;
 }
-function getMockData(schema, identifier) {
-  if (!schema) {
-    return undefined;
-  }
+
+
+function getMockData(schema, identifier = '$') {
+  if (!schema) return undefined;
 
   if (schema.oneOf) {
-    const items = schema.oneOf;
-    return mockData(
-        items[Math.floor(Math.random() * items.length)], identifier);
+    const schemas = schema.oneOf;
+    return getMockData(
+        schemas[Math.floor(Math.random() * schemas.length)], identifier);
   }
 
   if (schema.enum) {
     const items = schema.enum;
     return items[Math.floor(Math.random() * items.length)];
   }
+
   switch (schema.type) {
     case 'boolean':
       return [true, false][Math.floor(Math.random() * 2)];
@@ -131,19 +133,19 @@ function getMockData(schema, identifier) {
       return getMockObject(schema, identifier);
     default:
       logger['error'](`No support for ${schema.type}`);
+      return;
   }
 }
 
 function getMockHeaders(parameters) {
-  const headers = {};
+  const mockHeaders = {};
   parameters = parameters || [];
-  for (let index = 0; index < parameters.length; index++) {
-    const parameter = parameters[index];
+  parameters.forEach(function(parameter) {
     if (parameter.in === 'header') {
-      headers[parameter['name']] = getMockData(parameter['schema']);
+      mockHeaders[parameter['name']] = getMockData(parameter['schema']);
     }
-  }
-  return headers;
+  });
+  return mockHeaders;
 }
 
 function getMockRequestBody(schema) {
@@ -153,4 +155,5 @@ function getMockRequestBody(schema) {
 module.exports = {
   getMockHeaders,
   getMockRequestBody,
+  getMockData,
 };

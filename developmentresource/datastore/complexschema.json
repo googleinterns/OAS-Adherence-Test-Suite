@@ -1,0 +1,88 @@
+{
+    "type": "object",
+    "properties": {
+        "recObject": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 100,
+                    "maximum": 150
+                },
+                "petId": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "shipDate": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 20,
+                    "format": "date-time"
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Order Status",
+                    "enum": [
+                    "placed",
+                    "approved",
+                    "delivered"
+                    ]
+                },
+                "complete": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "status",
+                "complete"
+            ],
+            "xml": {
+                "name": "Order"
+            }
+        },
+        "id": {
+            "type": "integer",
+            "format": "int64"
+        },
+        "petId": {
+            "type": "integer",
+            "format": "int64"
+        },
+        "quantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 150
+        },
+        "shipDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 20,
+            "format": "date-time"
+        },
+        "status": {
+            "type": "string",
+            "description": "Order Status",
+            "enum": [
+            "placed",
+            "approved",
+            "delivered"
+            ]
+        },
+        "complete": {
+            "type": "boolean"
+        }
+    },
+    "xml": {
+      "name": "Order"
+    },
+    "required": [
+        "status",
+        "complete"
+    ]
+}

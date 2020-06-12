@@ -1,7 +1,9 @@
+/* eslint-disable no-constant-condition */
 // eslint-disable-next-line no-unused-vars
 const colors = require('colors');
+const btoa = require('btoa');
 const readlineSync = require('readline-sync');
-const jsonFieldsAtLevel = require('../../utils/jsonFieldsAtLevel');
+const {getJsonFieldsAtLevel} = require('./Util');
 
 function getApiKeyFromUser(apiKey) {
   const response = readlineSync.question(`\n[API_KEY]  ${apiKey}:  `.grey);
@@ -9,29 +11,40 @@ function getApiKeyFromUser(apiKey) {
 }
 
 
-function getApiKeyList(apiSpec, securitySchemes) {
-  const apiSecuritySchemes = apiSpec.security || [];
+function getApiKeyListForChosenApiEndPoints(apiEndPoints, oasDoc) {
+  const globalSecuritySchemes = oasDoc.components.securitySchemes || {};
   const apiKeyList = [];
-  apiSecuritySchemes.forEach(function(apiSecurityScheme) {
-    const key = jsonFieldsAtLevel(apiSecurityScheme, 1)[0];
-    if (securitySchemes[key].type === 'apiKey') {
-      // console.log('Insert', key);
-      apiKeyList.push(key);
-    }
+
+  apiEndPoints.forEach(function(apiEndPoint) {
+    const securitySchemes =
+      oasDoc.paths[apiEndPoint.path][apiEndPoint.httpMethod].security || [];
+
+    securitySchemes.forEach(function(securityScheme) {
+      const securityKey = getJsonFieldsAtLevel(securityScheme, 1)[0];
+      if (globalSecuritySchemes[securityKey].type === 'apiKey') {
+        apiKeyList.push(securityKey);
+      }
+    });
   });
   return apiKeyList;
 }
 
-function isBasicAuthRequired(apiSpec, securitySchemes) {
-  const apiSecuritySchemes = apiSpec.security || [];
+
+function isBasicAuthRequiredForChosenApiEndPoints(apiEndPoints, oasDoc) {
+  const globalSecuritySchemes = oasDoc.components.securitySchemes || {};
   let isRequired = false;
 
-  apiSecuritySchemes.forEach(function(apiSecurityScheme) {
-    const key = jsonFieldsAtLevel(apiSecurityScheme, 1)[0];
-    if (securitySchemes[key].type === 'http' &&
-        securitySchemes[key].scheme === 'basic') {
-      isRequired = true;
-    }
+  apiEndPoints.forEach(function(apiEndPoint) {
+    const securitySchemes =
+      oasDoc.paths[apiEndPoint.path][apiEndPoint.httpMethod].security || [];
+
+    securitySchemes.forEach(function(securityScheme) {
+      const securityKey = getJsonFieldsAtLevel(securityScheme, 1)[0];
+      if (globalSecuritySchemes[securityKey].type === 'http' &&
+        globalSecuritySchemes[securityKey].scheme === 'basic') {
+        isRequired = true;
+      }
+    });
   });
   return isRequired;
 }
@@ -46,7 +59,6 @@ function getBasicAuthCredentialsFromUser() {
   const userName = readlineSync.question('UserName:  ');
   let password;
   let confirmPassword;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     password = readlineSync.question('Password:  ', {hideEchoBack: true});
     confirmPassword =
@@ -59,7 +71,6 @@ function getBasicAuthCredentialsFromUser() {
     break;
   }
 
-  // return 'Basic ' + Buffer.from(userName + ':' +password).toString('base64');
   // Return base64 Encoded String.
   return 'Basic ' + btoa(userName + ':' + password);
 }
@@ -67,9 +78,8 @@ function getBasicAuthCredentialsFromUser() {
 
 module.exports = {
   getApiKeyFromUser,
-  getApiKeyList,
+  getApiKeyListForChosenApiEndPoints,
   getBasicAuthCredentialsFromUser,
-  isBasicAuthRequired,
+  isBasicAuthRequiredForChosenApiEndPoints,
 };
-
 

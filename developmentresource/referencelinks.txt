@@ -1,0 +1,95 @@
+https://editor.swagger.io/  Used for converting oas2.0 to oas3.0 or a yaml spec to json spec file.
+https://stackoverflow.com/questions/59749513/how-to-convert-openapi-2-0-to-openapi-3-0
+
+
+
+
+
+https://petstore.swagger.io/v2/store/order/2
+
+https://stackoverflow.com/questions/32999049/how-to-get-the-nodes-at-a-particular-level-in-a-json-object
+
+
+
+https://petstore.swagger.io/v2/store/order
+{
+    "id":1,
+    "petId":1,
+    "quantity":3,
+    "shipDate":"2012-01-26T13:51:50.417-07:00",
+    "status":"approved",
+    "complete":false
+}
+
+
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
+https://www.npmjs.com/package/randexp
+
+https://stackoverflow.com/questions/6521572/javascript-regex-not-working
+
+https://swagger.io/docs/specification/data-models/keywords/
+
+https://google.github.io/styleguide/cppguide.html#Spaces_vs._Tabs
+
+https://www.codediesel.com/nodejs/generate-a-random-strings-using-regular-expressions-in-nodejs/
+
+
+https://www.blitter.se/utils/basic-authentication-header-generator/
+For basic authentication , check the dev tools of the page for the logic.
+
+https://stackoverflow.com/questions/1527803/generating-random-whole-numbers-in-javascript-in-a-specific-range
+
+https://stackoverflow.com/questions/18314687/how-to-implement-cursors-for-pagination-in-an-api (Just for reading)
+
+https://stackoverflow.com/questions/35318442/how-to-pass-parameter-to-a-promise-function
+
+https://stackoverflow.com/questions/5378603/in-a-recursive-function-where-to-store-results
+
+https://stackoverflow.com/questions/10729276/how-can-i-get-the-full-object-in-node-jss-console-log-rather-than-object
+
+cannot log objects without using JSON.stringify
+https://github.com/winstonjs/winston/issues/1217
+
+https://stackoverflow.com/questions/38811421/how-to-check-if-an-array-is-a-subset-of-another-array-in-javascript
+
+https://www.ibm.com/support/knowledgecenter/en/SSEP7J_10.2.2/com.ibm.swg.ba.cognos.ug_rtm_wb.10.2.2.doc/c_n30e74.html
+
+https://stackoverflow.com/questions/6521572/javascript-regex-not-working     (P1)
+
+
+// Case to Cover: Same Path can have multiple http methods. 
+
+For generating good looking reports.
+https://www.npmjs.com/package/pdfkit
+
+https://stackoverflow.com/questions/24037545/how-to-hide-password-in-the-nodejs-console
+
+
+https://stackoverflow.com/questions/36540996/how-to-take-two-consecutive-input-with-the-readline-module-of-node-js
+
+https://code-maven.com/list-content-of-directory-with-nodejs
+
+https://github.com/mochajs/mocha/wiki/Using-mocha-programmatically
+
+
+https://stackoverflow.com/questions/28400459/referenceerror-describe-is-not-defined-nodejs
+
+https://community.apigee.com/questions/59564/handling-api-key-expiration.html
+
+
+
+https://github.com/google/har2csv
+(Starter Reference for command linr tool)
+
+https://medium.com/netscape/a-guide-to-create-a-nodejs-command-line-package-c2166ad0452e
+https://docs.npmjs.com/files/package.json#:~:text=bin,to%20install%20into%20the%20PATH.&text=To%20use%20this%2C%20supply%20a,%2C%20or%20.%2Fnode_modules%2F.
+https://blog.npmjs.org/post/118810260230/building-a-simple-command-line-tool-with-npm
+
+https://github.com/google/end-to-end
+
+https://dev.to/devdammak/setting-up-eslint-in-your-javascript-project-with-vs-code-2amf
+For eslint setup.
+
+https://stackoverflow.com/questions/23341883/can-node-modules-require-each-other
+
+https://github.com/google/lintush

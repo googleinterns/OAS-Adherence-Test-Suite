@@ -10,4 +10,8 @@ const customLogger = createLogger({
   ),
   transports: [new transports.Console()],
 });
-module.exports = customLogger;
+
+module.exports = {
+  logger: customLogger,
+};
+

@@ -1,0 +1,60 @@
+{
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "format": "int64",
+        "minimum": 100
+      },
+      "petId": {
+        "type": "integer",
+        "format": "int64",
+        "maximum": 100
+      },
+      "quantity": {
+        "type": "integer",
+        "format": "int32",
+        "minimum": 100,
+        "maximum": 150
+      },
+      "shipDate": {
+        "type": "string",
+        "minLength": 10,
+        "format": "email"
+      },
+      "shipDate2": {
+        "type": "string",
+        "minLength": 10,
+        "maxLength": 20,
+        "format": "ipv6"
+      },
+      "status": {
+        "type": "string",
+        "description": "Order Status",
+        "enum": [
+          "placed",
+          "approved",
+          "delivered"
+        ]
+      },
+      "statusDup": {
+        "type": "string",
+        "description": "Order Status",
+        "enum": [
+          "placed",
+          "approved",
+          "delivered"
+        ]
+      },
+      "complete": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "status",
+      "complete"
+    ],
+    "xml": {
+      "name": "Order"
+    }
+  }

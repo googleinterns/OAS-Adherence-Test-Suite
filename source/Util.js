@@ -24,7 +24,7 @@ function getRandomString(length) {
 
 
 function getJsonFieldsAtLevel(obj, level) {
-  if (!obj || typeof(obj) !== 'object') return [];
+  if (!obj || typeof(obj) !== 'object' || Array.isArray(obj)) return [];
   if (level < 1) return [];
 
   const keysAtCurrentLevel = Object.keys(obj);
@@ -33,7 +33,7 @@ function getJsonFieldsAtLevel(obj, level) {
 
   let fields = [];
   if (keysAtCurrentLevel.length) {
-    for (let index=0; index<keysAtCurrentLevel.length; index++) {
+    for (let index = 0; index < keysAtCurrentLevel.length; index++) {
       getJsonFieldsAtLevel(obj[keysAtCurrentLevel[index]], level-1);
       fields = fields.concat(
           getJsonFieldsAtLevel(obj[keysAtCurrentLevel[index]], level-1));

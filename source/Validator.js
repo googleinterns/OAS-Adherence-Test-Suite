@@ -1,6 +1,8 @@
-const logger = require('./logger');
 const validator = require('validator');
-const jsonFieldsAtLevel = require('../utils/jsonFieldsAtLevel');
+const isNumber = require('is-number');
+const isInteger = require('is-integer');
+const {logger} = require('./Logger');
+const {getJsonFieldsAtLevel} = require('./Util');
 
 function isBoolean(data, schema, options = {}, identifier = '$') {
   let errors = [];
@@ -20,15 +22,16 @@ function isBoolean(data, schema, options = {}, identifier = '$') {
   return errors;
 }
 
+
 function validateArrayAgainstSchema(
     data, schema, options = {}, identifier = '$') {
   const itemSchema = schema.items;
   let errors = [];
   for (let index = 0; index < data.length; index++) {
-    const childError =
+    const itemError =
       validateDataAgainstSchema(data[index], itemSchema, options, identifier);
 
-    errors = errors.concat(childError);
+    errors = errors.concat(itemError);
   }
   return errors;
 }
@@ -37,19 +40,65 @@ function validateArrayAgainstSchema(
 function validateNumberAgainstSchema(
     data, schema, options = {}, identifier = '$') {
   let errors = [];
+  if (!isNumber(data)) {
+    errors = errors.push({
+      errorType: 'DataType Error',
+      errorDetails: {
+        key: identifier,
+        value: data,
+        expectedDataType: 'number',
+        receivedDataType: typeof(data),
+      },
+    });
+    return errors;
+  }
+
   const low = schema.minimum;
   const high = schema.maximum;
 
   if ((low && data < low) || (high && data > high)) {
-    errors = errors.concat([{
-      errorType: 'Integer/Number Range Error',
+    errors = errors.push({
+      errorType: 'Number Range Error',
       errorDetails: {
         key: identifier,
         value: data,
         minAllowed: low,
         maxAllowed: high,
       },
-    }]);
+    });
+  }
+  return errors;
+}
+
+
+function validateIntegerAgainstSchema(
+    data, schema, options = {}, identifier = '$') {
+  let errors = [];
+  if (!isInteger(data)) {
+    errors = errors.push({
+      errorType: 'DataType Error',
+      errorDetails: {
+        key: identifier,
+        value: data,
+        expectedDataType: 'integer',
+        receivedDataType: typeof(data),
+      },
+    });
+    return errors;
+  }
+  const low = schema.minimum;
+  const high = schema.maximum;
+
+  if ((low && data < low) || (high && data > high)) {
+    errors = errors.push({
+      errorType: 'Integer Range Error',
+      errorDetails: {
+        key: identifier,
+        value: data,
+        minAllowed: low,
+        maxAllowed: high,
+      },
+    });
   }
   return errors;
 }
@@ -58,8 +107,20 @@ function validateNumberAgainstSchema(
 function validateObjectAgainstSchema(
     data, schema, options = {}, identifier = '$') {
   let errors = [];
+  if (typeof(data) !== 'object') {
+    errors = errors.push({
+      errorType: 'DataType Error',
+      errorDetails: {
+        key: identifier,
+        value: data,
+        expectedDataType: 'object',
+        receivedDataType: typeof(data),
+      },
+    });
+    return errors;
+  }
   if (schema.properties === undefined) {
-    // Cross-Verification Required.---[DEV]
+    // [DEV] Cross-Verification Required.
     errors.push({
       errorType: 'OAS 3.0 Error',
       errorDetails: {
@@ -73,7 +134,7 @@ function validateObjectAgainstSchema(
   }
 
 
-  const keys = jsonFieldsAtLevel(data, 1);
+  const keys = getJsonFieldsAtLevel(data, 1);
   keys.sort();
 
   for (let index = 1; index < keys.length; index++) {
@@ -97,48 +158,57 @@ function validateObjectAgainstSchema(
 
   if (schema.required) {
     const requiredKeys = schema.required;
-    for (let index = 0; index < requiredKeys.length; index++) {
-      if (data[requiredKeys[index]] === null) {
+    requiredKeys.forEach(function(requiredKey) {
+      if (data[requiredKey] === undefined) {
         errors.push({
           errorType: 'Required Key Error',
           errorDetails: {
             key: identifier,
             value: data,
-            missingKey: requiredKeys[index],
+            missingKey: requiredKey,
           },
         });
       }
-    }
+    });
     if (errors.length) return errors;
   }
 
-  const validateDataAgainstSchema = require('./validateDataAgainstSchema');
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
+  keys.forEach(function(key) {
     const keySchema = schema.properties[key];
     const newIdentifier = identifier + '.' + key;
-    const childError =
+    const valueError =
         validateDataAgainstSchema(data[key], keySchema, options, newIdentifier);
-    errors = errors.concat(childError);
-  }
+    errors = errors.concat(valueError);
+  });
   return errors;
 }
 
 
 function validateStringAgainstSchema(
     data, schema, options = {}, identifier = '$') {
+  const errors = [];
+  if (typeof(data) !== 'string') {
+    errors.push({
+      errorType: 'DataType Error',
+      errorDetails: {
+        key: identifier,
+        value: data,
+        expectedDataType: 'string',
+        receivedDataType: typeof(data),
+      },
+    });
+    return errors;
+  }
   /*
-    Currently, we don't check for combined restrictions.
+    We don't check for combined restrictions.
     Example: {minLength: 20, format: email}.
-    If there are multiple condns, we check as per the below priority and skip
-    checking the other restrictions.
+    If there are multiple condns, we check as per the below priority.
     Priority List:
       - format
       - pattern
       - minLength, maxLength
   */
-  console.log(data);
-  const errors = [];
+
   if (schema.format) {
     let formatError = false;
     switch (schema.format) {
@@ -167,7 +237,7 @@ function validateStringAgainstSchema(
         });
         break;
     }
-    // Should we throw an error for un-supported formats.
+
     if (!formatError) {
       errors.push({
         errorType: 'Format Error',
@@ -178,6 +248,8 @@ function validateStringAgainstSchema(
         },
       });
     }
+    return errors;
+    // Should we throw an error for un-supported formats???
   }
 
   if (schema.pattern) {
@@ -200,10 +272,12 @@ function validateStringAgainstSchema(
         errorDetails: {
           key: identifier,
           value: data,
+          pattern: schema.pattern,
           errorMessage: 'Invalid Regex Expression',
         },
       });
     }
+    return errors;
   }
 
   const low = schema.minLength;
@@ -220,15 +294,18 @@ function validateStringAgainstSchema(
         dataLength: data.length,
       },
     });
+    return errors;
   }
+  // Empty Error Array is returned.
+  return errors;
 }
 
 
 function validateDataAgainstSchema(
     data, schema, options = {}, identifier = '$') {
-  const errors = [];
-
   if (schema === undefined) {
+    const errors = [];
+
     const errorInfo = {
       errorType: 'Excess of Data Error',
       errorDetails: {
@@ -246,6 +323,7 @@ function validateDataAgainstSchema(
 
 
   if (data === undefined) {
+    const errors = [];
     errors.push({
       errorType: 'Lack of Data Error',
       errorDetails: {
@@ -259,12 +337,15 @@ function validateDataAgainstSchema(
 
 
   if (schema.oneOf) {
+    const errors = [];
+
     const schemas = schema.oneOf;
-    for (let index = 0; index < schemas.length; index++) {
+    schemas.forEach(function(schema) {
       const childErrors = validateDataAgainstSchema(
-          data, schemas[index], options, identifier);
+          data, schema, options, identifier);
       if (!childErrors.length) return [];
-    }
+    });
+
     errors.push({
       errorType: 'oneOf Error',
       errorDetails: {
@@ -278,9 +359,10 @@ function validateDataAgainstSchema(
 
 
   if (schema.type !== typeof(data)) {
+    const errors = [];
     /*
-      Extra check for schema.type = "integer"  as "integer"
-      is not a built-in dataType in Javascript.
+      Extra check for schema.type = "integer"
+      as "integer" is not a built-in dataType in Javascript.
     */
     if (!(schema.type === 'integer' && typeof(data) === 'number')) {
       errors.push({
@@ -298,11 +380,14 @@ function validateDataAgainstSchema(
 
 
   if (schema.enum) {
-    const items = schema.enum;
+    const errors = [];
     let isValid = false;
-    for (let index = 0; index < items.length; index++) {
-      isValid |= (data === items[index]);
-    }
+
+    const items = schema.enum;
+    items.forEach(function(item) {
+      isValid |= (data === item);
+    });
+
     if (!isValid) {
       errors.push({
         errorType: 'Enum Error',
@@ -317,11 +402,15 @@ function validateDataAgainstSchema(
   }
 
   if (schema.type === 'boolean') {
-    return isBoolean(data, identifier);
+    return isBoolean(data, schema, options, identifier);
   }
 
-  if (schema.type === 'number' || schema.type === 'integer') {
+  if (schema.type === 'number') {
     return validateNumberAgainstSchema(data, schema, options, identifier);
+  }
+
+  if (schema.type === 'integer') {
+    return validateIntegerAgainstSchema(data, schema, options, identifier);
   }
 
   if (schema.type === 'string') {
@@ -343,13 +432,11 @@ function validateDataAgainstSchema(
     errorMessage: `Missed to handle some case in
     validateDataAgainstSchema Function`,
   });
-  return errors;
+
+  // Returning an empty Errors Array.
+  return [];
 }
 
 module.exports = {
-  isBoolean,
-  validateArrayAgainstSchema,
-  validateNumberAgainstSchema,
-  validateObjectAgainstSchema,
-  validateStringAgainstSchema,
+  validateDataAgainstSchema,
 };
