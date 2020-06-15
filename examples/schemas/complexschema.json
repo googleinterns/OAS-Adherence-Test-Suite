@@ -1,0 +1,147 @@
+{
+  "type": "object",
+  "properties": {
+    "recObject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 100,
+          "maximum": 150
+        },
+        "petId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "shipDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 20
+        },
+        "status": {
+          "type": "string",
+          "description": "Order Status",
+          "enum": [
+            "placed",
+            "approved",
+            "delivered"
+          ]
+        },
+          "complete": {
+            "type": "boolean"
+          }
+      },
+      "required": [
+        "status",
+        "complete"
+      ],
+      "xml": {
+        "name": "Order"
+      }
+    },
+    "id": {
+      "type": "integer",
+      "format": "int64"
+    },
+    "petId": {
+      "type": "integer",
+      "format": "int64"
+    },
+    "height": {
+      "type": "number",
+      "minimum": 1.25,
+      "maximum": 9.00
+    },
+    "quantity": {
+      "type": "integer",
+      "format": "int32",
+      "minimum": 100,
+      "maximum": 150
+    },
+    "shipDate": {
+      "type": "string",
+      "minLength": 10
+    },
+    "status": {
+      "type": "string",
+      "description": "Order Status",
+      "enum": [
+      "placed",
+      "approved",
+      "delivered"
+      ]
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Order Status",
+            "enum": [
+            "placed",
+            "approved",
+            "delivered"
+            ]
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 15
+          },
+          "age": {
+            "type": "integer",
+            "minimum": 18,
+            "maximum": 64
+          }
+        },
+        "required": [
+          "status",
+          "complete"
+        ]
+      }
+    },
+    "master": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "bark": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "hunts": {
+              "type": "boolean"
+            },
+            "age": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "xml": {
+    "name": "Order"
+  },
+  "required": [
+    "status",
+    "complete"
+  ]
+}

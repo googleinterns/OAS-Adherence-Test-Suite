@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "properties": {
+    "firstname": {
+      "type": "string",
+      "format": "email"
+    },
+    "secondname": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "thirdname": {
+      "type": "string",
+      "format": "uri"
+    },
+    "fourthname": {
+      "type": "string",
+      "format": "ipv4"
+    },
+    "lastname": {
+      "type": "string",
+      "format": "ipv6"
+    }
+  }
+}

@@ -87,7 +87,10 @@
         },
         "security": [
           {
-            "basicAuth": []
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
           }
         ],
         "x-codegen-request-body-name": "body"
@@ -122,10 +125,7 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "basicAuth": []
           }
         ],
         "x-codegen-request-body-name": "body"
@@ -1078,14 +1078,14 @@
       }
     },
     "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
       "api_key": {
         "type": "apiKey",
         "name": "api_key",
         "in": "header"
-      },
-      "basicAuth":{
-        "type": "http",
-        "scheme": "basic"
       },
       "petstore_auth": {
         "type": "oauth2",
