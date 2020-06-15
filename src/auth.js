@@ -34,7 +34,6 @@ function getApiKeyList(apiEndpoints, oasDoc) {
   apiEndpoints.forEach(function(apiEndPoint) {
     const securitySchemes =
       oasDoc.paths[apiEndPoint.path][apiEndPoint.httpMethod].security || [];
-
     securitySchemes.forEach(function(securityScheme) {
       const securityKey = Object.keys(securityScheme)[0];
       if (globalSecuritySchemes[securityKey].type === 'apiKey') {
@@ -60,7 +59,6 @@ function isBasicAuthRequired(apiEndpoints, oasDoc) {
   apiEndpoints.forEach(function(apiEndPoint) {
     const securitySchemes =
       oasDoc.paths[apiEndPoint.path][apiEndPoint.httpMethod].security || [];
-
     securitySchemes.forEach(function(securityScheme) {
       const securityKey = Object.keys(securityScheme)[0];
       if (globalSecuritySchemes[securityKey].type === 'http' &&
@@ -71,7 +69,6 @@ function isBasicAuthRequired(apiEndpoints, oasDoc) {
   });
   return isRequired;
 }
-
 
 module.exports = {
   getApiKeyList,

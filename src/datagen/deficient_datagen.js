@@ -68,7 +68,6 @@ function getDataDeficientByDataType(schema, identifier='$') {
   if (schema.type === DataType.ARRAY) {
     const deficientDatasOfItem =
       getDataDeficientByDataType(schema.items, identifier);
-
     deficientDatasOfItem.forEach(function(deficientDataOfItem) {
       deficientData.push({
         key: '[]' + deficientDataOfItem.key,
@@ -81,12 +80,10 @@ function getDataDeficientByDataType(schema, identifier='$') {
 
   if (schema.type === DataType.OBJECT) {
     const keys = Object.keys(schema.properties);
-
     keys.forEach(function(key) {
       const keySchema = schema.properties[key];
       const deficientDatasOfKey =
         getDataDeficientByDataType(keySchema, identifier + '.' + key);
-
       deficientDatasOfKey.forEach(function(deficientDataOfKey) {
         const object = getMockData(schema);
         object[key] = deficientDataOfKey.data;
@@ -163,23 +160,19 @@ function getDataDeficientByEnum(schema, identifier='$') {
         enumList: deficientDataOfItem.enumList,
       });
     });
-
     return deficientData;
   }
 
   if (schema.type === DataType.OBJECT) {
     const deficientData = [];
     const keys = Object.keys(schema.properties);
-
     keys.forEach(function(key) {
       const keySchema = schema.properties[key];
       const deficientDatasOfKey =
             getDataDeficientByEnum(keySchema, identifier + '.' + key) || [];
-
       deficientDatasOfKey.forEach(function(deficientDataOfKey) {
         const object = getMockData(schema);
         object[key] = deficientDataOfKey.data;
-
         deficientData.push({
           key: deficientDataOfKey.key,
           data: object,
@@ -187,7 +180,6 @@ function getDataDeficientByEnum(schema, identifier='$') {
         });
       });
     });
-
     return deficientData;
   }
   return [];
@@ -229,7 +221,6 @@ function getDataDeficientByNumberLimit(
         minimumAllowed: schema.minimum,
       });
     }
-
     if (options.checkMaximum && schema.maximum) {
       deficientData.push({
         key: identifier,
@@ -237,7 +228,6 @@ function getDataDeficientByNumberLimit(
         maximumAllowed: schema.maximum,
       });
     }
-
     return deficientData;
   }
 
@@ -253,7 +243,6 @@ function getDataDeficientByNumberLimit(
           minimumAllowed: deficientDataOfItem.minimumAllowed,
         });
       }
-
       if (options.checkMaximum && deficientDataOfItem.maximumAllowed) {
         deficientData.push({
           key: deficientDataOfItem.key,
@@ -262,14 +251,12 @@ function getDataDeficientByNumberLimit(
         });
       }
     });
-
     return deficientData;
   }
 
   if (schema.type === DataType.OBJECT) {
     const deficientData = [];
     const keys = Object.keys(schema.properties);
-
     keys.forEach(function(key) {
       const keySchema = schema.properties[key];
       const deficientDatasOfKey =
@@ -285,7 +272,6 @@ function getDataDeficientByNumberLimit(
             minimumAllowed: deficientDataOfKey.minimumAllowed,
           });
         }
-
         if (options.checkMaximum && deficientDataOfKey.maximumAllowed) {
           deficientData.push({
             key: deficientDataOfKey.key,
@@ -324,7 +310,6 @@ function getDataDeficientByOptionalKey(schema, identifier='$') {
     const deficientData = [];
     const deficientDatasOfItem =
     getDataDeficientByOptionalKey(schema.items, identifier) || [];
-
     deficientDatasOfItem.forEach(function(deficientDataOfItem) {
       deficientData.push({
         data: [deficientDataOfItem.data],
@@ -337,12 +322,10 @@ function getDataDeficientByOptionalKey(schema, identifier='$') {
   if (schema.type === DataType.OBJECT) {
     const deficientData = [];
     const keys = Object.keys(schema.properties);
-
     keys.forEach(function(key) {
       const keySchema = schema.properties[key];
       const deficientDatasOfKey =
       getDataDeficientByOptionalKey(keySchema, identifier + '.' + key) || [];
-
       deficientDatasOfKey.forEach(function(deficientDataOfKey) {
         const object = getMockData(schema);
         object[key] = deficientDataOfKey.data;
@@ -367,7 +350,6 @@ function getDataDeficientByOptionalKey(schema, identifier='$') {
     });
     return deficientData;
   }
-
   return [];
 }
 
@@ -395,7 +377,6 @@ function getDataDeficientByRequiredKey(schema, identifier='$') {
     const deficientData = [];
     const deficientDatasOfItem =
     getDataDeficientByRequiredKey(schema.items, identifier) || [];
-
     deficientDatasOfItem.forEach(function(deficientDataOfItem) {
       deficientData.push({
         data: [deficientDataOfItem.data],
@@ -408,12 +389,10 @@ function getDataDeficientByRequiredKey(schema, identifier='$') {
   if (schema.type === DataType.OBJECT) {
     const deficientData = [];
     const keys = Object.keys(schema.properties);
-
     keys.forEach(function(key) {
       const keySchema = schema.properties[key];
       const deficientDatasOfKey =
       getDataDeficientByRequiredKey(keySchema, identifier + '.' + key) || [];
-
       deficientDatasOfKey.forEach(function(deficientDataOfKey) {
         const object = getMockData(schema);
         object[key] = deficientDataOfKey.data;
@@ -435,7 +414,6 @@ function getDataDeficientByRequiredKey(schema, identifier='$') {
         });
       }
     });
-
     return deficientData;
   }
 
@@ -478,7 +456,6 @@ function getDataDeficientByStringLength(
         minimumLengthAllowed: schema.minLength,
       });
     }
-
     if (options.checkMaximumLength && schema.maxLength) {
       deficientData.push({
         key: identifier,
@@ -494,7 +471,6 @@ function getDataDeficientByStringLength(
     const deficientData = [];
     const deficientDatasOfItem = getDataDeficientByStringLength(
         schema.items, options, identifier + '[]') || [];
-
     deficientDatasOfItem.forEach(function(deficientDataOfItem) {
       if (options.checkMinimumLength &&
           deficientDataOfItem.minimumLengthAllowed) {
@@ -504,7 +480,6 @@ function getDataDeficientByStringLength(
           minimumLengthAllowed: deficientDataOfItem.minimumLengthAllowed,
         });
       }
-
       if (options.checkMaximumLength &&
           deficientDataOfItem.maximumLengthAllowed) {
         deficientData.push({
@@ -514,20 +489,16 @@ function getDataDeficientByStringLength(
         });
       }
     });
-
     return deficientData;
   }
 
   if (schema.type === DataType.OBJECT) {
     const deficientData = [];
     const keys = Object.keys(schema.properties);
-
     keys.forEach(function(key) {
       const keySchema = schema.properties[key];
-
       const deficientDatasOfItem = getDataDeficientByStringLength(
           keySchema, options, identifier + '.' + key) || [];
-
       deficientDatasOfItem.forEach(function(deficientDataOfItem) {
         const object = getMockData(schema);
         object[key] = deficientDataOfItem.data;
@@ -539,7 +510,6 @@ function getDataDeficientByStringLength(
             minimumLengthAllowed: deficientDataOfItem.minimumLengthAllowed,
           });
         }
-
         if (options.checkMaximumLength &&
           deficientDataOfItem.maximumLengthAllowed) {
           deficientData.push({
@@ -550,10 +520,8 @@ function getDataDeficientByStringLength(
         }
       });
     });
-
     return deficientData;
   }
-
   return [];
 }
 

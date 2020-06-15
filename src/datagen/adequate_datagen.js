@@ -132,7 +132,6 @@ function getMockString(schema, identifier) {
 function getMockArray(schema, identifier) {
   const mockArray = [];
   const lengthOfMockArray = getRandomNumber(1, 10, {returnInteger: true});
-
   for (let index = 0; index < lengthOfMockArray; index++) {
     mockArray.push(getMockData(schema.items, identifier));
   }

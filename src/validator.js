@@ -97,7 +97,6 @@ function validateNumberAgainstSchema(
 
   const low = schema.minimum;
   const high = schema.maximum;
-
   if ((low && data < low) || (high && data > high)) {
     errors.push({
       errorType: 'Number Range Error',
@@ -138,7 +137,6 @@ function validateIntegerAgainstSchema(
 
   const low = schema.minimum;
   const high = schema.maximum;
-
   if ((low && data < low) || (high && data > high)) {
     errors.push({
       errorType: 'Integer Range Error',
@@ -192,7 +190,6 @@ function validateObjectAgainstSchema(
 
   const keys = Object.keys(data);
   keys.sort();
-
   for (let index = 1; index < keys.length; index++) {
     if (keys[index] === keys[index-1]) {
       // To avoid sending same error multiple times.
@@ -345,7 +342,6 @@ function validateStringAgainstSchema(
 
   const low = schema.minLength;
   const high = schema.maxLength;
-
   if ((low && data.length < low) || (high && data.length > high)) {
     errors.push({
       errorType: 'String Length Error',
@@ -456,12 +452,10 @@ function validateDataAgainstSchema(
   if (schema.enum) {
     const errors = [];
     let isValid = false;
-
     const items = schema.enum;
     items.forEach(function(item) {
       isValid = (data === item) ? true: isValid;
     });
-
     if (!isValid) {
       errors.push({
         errorType: 'Enum Error',
@@ -498,7 +492,6 @@ function validateDataAgainstSchema(
       });
       break;
   }
-
   return [];
 }
 

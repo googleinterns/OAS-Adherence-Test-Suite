@@ -30,7 +30,6 @@
 function getRandomNumber(low, high, options = {}) {
   low = low || Number.MIN_SAFE_INTEGER;
   high = high || Number.MAX_SAFE_INTEGER;
-
   let result = Math.random() * (high - low) + low;
   if (options.returnInteger) result = Math.trunc(result);
   return result;
