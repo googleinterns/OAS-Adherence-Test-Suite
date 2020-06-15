@@ -65,19 +65,19 @@ describe('adequate_datagen.js', function() {
     });
   });
 
-  describe('getMockHeaders', function() {
+  describe.only('getMockHeaders', function() {
     it('headers generated should comply with schema', function() {
       const result = getMockHeaders(parameters);
       assert.isObject(result);
-      for (let index = 0; index < parameters.length; index++) {
-        parameter = parameters[index];
+      parameters.forEach(function(parameter) {
+        console.log(parameter);
         if (parameter.in === 'header') {
           assert.exists(result[parameter['name']]);
           const errors = validateDataAgainstSchema(
               result[parameter['name']], parameter.schema);
           assert.isEmpty(errors);
         }
-      }
+      });
     });
 
     it('empty header object to be generated when no parameters are sent',

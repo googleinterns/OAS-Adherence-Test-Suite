@@ -206,12 +206,6 @@ function getMockData(schema, identifier = '$') {
 function getMockHeaders(parameters) {
   const mockHeaders = {};
   parameters = parameters || [];
-  for (let index = 0; index < parameters.length; index++) {
-    const parameter = parameters[index];
-    if (parameter.in === 'header') {
-      mockHeaders[parameter['name']] = getMockData(parameter['schema']);
-    }
-  }
   parameters.forEach(function(parameter) {
     if (parameter.in === 'header') {
       mockHeaders[parameter['name']] = getMockData(parameter['schema']);
