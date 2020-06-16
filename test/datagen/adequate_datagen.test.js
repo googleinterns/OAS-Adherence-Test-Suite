@@ -1,28 +1,24 @@
 /* eslint-disable no-undef */
 const chai = require('chai');
 const assert = chai.assert;
-
 const {validateDataAgainstSchema} = require('../../src/validator');
 const {
   getMockHeaders,
   getMockData,
 } = require('../../src/datagen/adequate_datagen');
-
 const simpleSchema = require('../../examples/schemas/simpleschema.json');
 const complexSchema = require('../../examples/schemas/complexschema.json');
 const schemaWithArrayField =
   require('../../examples/schemas/schema_arrayfield.json');
 const schemaWithOneofField =
-require('../../examples/schemas/schema_oneoffield.json');
+  require('../../examples/schemas/schema_oneoffield.json');
 const schemaWithReqField =
-require('../../examples/schemas/schema_requiredfield.json');
+  require('../../examples/schemas/schema_requiredfield.json');
 const schemaWithFormatField =
-require('../../examples/schemas/schema_formatfield.json');
+  require('../../examples/schemas/schema_formatfield.json');
 const schemas = [simpleSchema, complexSchema, schemaWithArrayField,
   schemaWithOneofField, schemaWithReqField, schemaWithFormatField];
-
 const badSchema = require('../../examples/schemas/badschema.json');
-
 const parameters = [
   {
     'name': 'api_key',
@@ -65,12 +61,11 @@ describe('adequate_datagen.js', function() {
     });
   });
 
-  describe.only('getMockHeaders', function() {
+  describe('getMockHeaders', function() {
     it('headers generated should comply with schema', function() {
       const result = getMockHeaders(parameters);
       assert.isObject(result);
       parameters.forEach(function(parameter) {
-        console.log(parameter);
         if (parameter.in === 'header') {
           assert.exists(result[parameter['name']]);
           const errors = validateDataAgainstSchema(

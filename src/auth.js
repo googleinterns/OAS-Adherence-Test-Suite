@@ -44,7 +44,6 @@ function getApiKeyList(apiEndpoints, oasDoc) {
   return apiKeyList;
 }
 
-
 /**
  * Checks whether Basic Authentication is required
  *    for any of the api endpoints.

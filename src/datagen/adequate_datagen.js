@@ -191,7 +191,7 @@ function getMockData(schema, identifier = '$') {
       return getMockObject(schema, identifier);
     default:
       logger['error'](`No support for ${schema.type}`);
-      return '';
+      return null;
   }
 }
 

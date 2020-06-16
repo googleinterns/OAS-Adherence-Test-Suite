@@ -1,7 +1,6 @@
 /* eslint-disable no-undef */
 const chai = require('chai');
 const assert = chai.assert;
-
 const {
   getApiKeyList,
   isBasicAuthRequired,

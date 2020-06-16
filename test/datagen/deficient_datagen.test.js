@@ -1,7 +1,6 @@
 /* eslint-disable no-undef */
 const chai = require('chai');
 const assert = chai.assert;
-
 const {validateDataAgainstSchema} = require('../../src/validator');
 const {
   getDataDeficientByDataType,

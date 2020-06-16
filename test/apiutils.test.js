@@ -1,7 +1,6 @@
 /* eslint-disable no-undef */
 const chai = require('chai');
 const assert = chai.assert;
-
 const {getApiEndpoints} = require('../src/apiutils');
 const oasDoc = require('../examples/oas/petstore_oas3.json');
 
