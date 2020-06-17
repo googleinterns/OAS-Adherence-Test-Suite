@@ -24,6 +24,7 @@
     "is-number": "^7.0.0",
     "json-schema-ref-parser": "^9.0.1",
     "jsonschema": "^1.2.6",
+    "lodash": "^4.17.15",
     "mkdirp": "^1.0.4",
     "mocha": "^7.2.0",
     "mocha-junit-reporter": "^2.0.0",
@@ -33,7 +34,10 @@
     "readline-sync": "^1.4.10",
     "request": "^2.88.2",
     "sendmail": "^1.6.1",
+    "swagger-parser": "^9.0.1",
+    "time-stamp": "^2.2.0",
     "toposort": "^2.0.2",
+    "unix-timestamp": "^0.2.0",
     "validator": "^13.0.0",
     "winston": "^3.2.1"
   },

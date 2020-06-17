@@ -19,6 +19,9 @@
  * @fileoverview Contains util functions for api endpoints.
  */
 
+const {logger} = require('./log');
+const SwaggerParser = require('@apidevtools/swagger-parser');
+
 /**
  * Returns an array of all possible api Endpoints.
  * @param {object} oasDoc OAS 3.0 Document.
@@ -39,6 +42,24 @@ function getApiEndpoints(oasDoc) {
   return apiEndpoints;
 }
 
+/**
+ * Validates the OAS 3.0 document and resolves all the $ref pointers and
+ * returns a de-referenced OAS 3.0 Documentation.
+ * @param {object} oasDoc OAS 3.0 Document.
+ * @return {object} parsed OAS 3.0 Document.
+ */
+async function parseOASDoc(oasDoc) {
+  try {
+    const parsedOASDoc = await SwaggerParser.validate(oasDoc);
+    return parsedOASDoc;
+  } catch (err) {
+    logger['error']('OAS 3.0 Document Parse Failed!! ');
+    return null;
+  }
+}
+// [DEV] Write Unit tests.
+
 module.exports = {
   getApiEndpoints,
+  parseOASDoc,
 };
