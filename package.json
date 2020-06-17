@@ -1,0 +1,50 @@
+{
+  "name": "oas-adherence-test-suite",
+  "version": "1.0.0",
+  "description": "**This is not an officially supported Google product.**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "test"
+  },
+  "dependencies": {
+    "ajv": "^6.12.2",
+    "axios": "^0.19.2",
+    "btoa": "^1.2.1",
+    "chai": "^4.2.0",
+    "colors": "^1.4.0",
+    "commander": "^5.1.0",
+    "eslint": "^7.2.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-vue": "^6.2.2",
+    "faker": "^4.1.0",
+    "ip-regex": "^4.1.0",
+    "is-integer": "^1.0.7",
+    "is-number": "^7.0.0",
+    "json-schema-ref-parser": "^9.0.1",
+    "jsonschema": "^1.2.6",
+    "mkdirp": "^1.0.4",
+    "mocha": "^7.2.0",
+    "mocha-junit-reporter": "^2.0.0",
+    "nodemailer": "^6.4.8",
+    "pdfkit": "^0.11.0",
+    "randexp": "^0.5.3",
+    "readline-sync": "^1.4.10",
+    "request": "^2.88.2",
+    "sendmail": "^1.6.1",
+    "toposort": "^2.0.2",
+    "validator": "^13.0.0",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "jsdoc": "^3.6.4",
+    "nyc": "^15.1.0"
+  },
+  "scripts": {
+    "test": "nyc --reporter=lcov mocha --recursive --timeout=9000",
+    "generate-docs": "jsdoc -c ./jsdoc/config.json"
+  },
+  "author": "Abilash",
+  "license": "ISC"
+}

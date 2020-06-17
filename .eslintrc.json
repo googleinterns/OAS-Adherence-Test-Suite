@@ -1,0 +1,17 @@
+{
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es2020": true
+    },
+    "extends": ["eslint:recommended", "google"],
+    "parserOptions": {
+        "ecmaVersion": 2018
+    },
+    "plugins": [
+        "vue"
+    ],
+    "rules": {
+        "require-jsdoc" : 0
+    }
+}

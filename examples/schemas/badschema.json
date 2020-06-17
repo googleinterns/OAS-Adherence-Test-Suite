@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "properties": {
+    "firstname": {
+      "type": "string",
+      "format": "loan_format"
+    },
+    "secondname": {
+      "type": "string",
+      "pattern": "^[$"
+    },
+    "thirdname": {
+      "type": "nested_object"
+    }
+  }
+}

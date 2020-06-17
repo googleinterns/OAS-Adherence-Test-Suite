@@ -1,0 +1,32 @@
+{
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "bark": {
+          "type": "boolean"
+        },
+        "breed": {
+          "type": "string",
+          "enum": [
+            "Dingo",
+            "Husky",
+            "Retriever",
+            "Shepherd"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "hunts": {
+          "type": "boolean"
+        },
+        "age": {
+          "type": "integer"
+        }
+      }
+    }
+  ]
+}
