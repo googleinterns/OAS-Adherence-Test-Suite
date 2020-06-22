@@ -16,21 +16,17 @@
 
 /** @module datagen/test_datagen */
 /**
- * @fileoverview Contain functions that help in generating testSuites and
- * storing them in a file.
+ * @fileoverview Contains functions that help in generating testCases for
+ * validation of request header, request body and security requirements of an
+ * api endpoint and creating a testSuite file.
  */
 
+const {snakeCase} = require('snake-case');
+const fs = require('fs');
 const _ = require('lodash');
-const timestamp = require('time-stamp');
-const unixTimestamp = require('unix-timestamp');
-unixTimestamp.round = true;
-/*
-  [HOST] The above module uses BSD-3-Clause license.
-  Please let me know if it is against our license policy.
-  https://www.npmjs.com/package/unix-timestamp
-*/
 const {getApiEndpoints} = require('../apiutils');
 const {logger} = require('../log');
+const {DataType} = require('../constants');
 const {getMockData, getMockHeaders} = require('./adequate_datagen');
 const {
   getDataDeficientByDataType,
@@ -42,63 +38,205 @@ const {
 } = require('./deficient_datagen');
 
 /**
- * Generates positive tests for the validation of request body.
- * Positive tests include test cases which on execution should get
+ * Generates positive test cases for the validation of request body.<br>
+ * Positive testcases include test cases which on execution should get
  * a 2xx http status code from the server.
- * @param {object} requestBodySchema Schema of request body.
+ * @param {object} schema Schema of request body.
  * @param {object} extras extra keys/fields to be appended to the generated
  *   test case.
- * @return {array<object>} positiveTests
+ * @return {array<object>} positive testcases
  */
-function getPostitveTestsRequestBody(requestBodySchema, extras) {
-  const positiveTests = [];
+function getPostitveTestCaseForRequestBody(schema, extras = {}) {
+  const dataDeficientByOptionalKey = getDataDeficientByOptionalKey(schema);
+
   let deficientDatas = [];
-  const dataDeficientByOptionalKey =
-    getDataDeficientByOptionalKey(requestBodySchema);
   deficientDatas = deficientDatas.concat(dataDeficientByOptionalKey);
 
+  const testCases = [];
   deficientDatas.forEach(function(deficientData) {
+    // To send an api request, the requestbody should be of object datatype.
+    if (typeof(deficientData.data) !== DataType.OBJECT) return;
     const testCase = _.merge(deficientData, extras);
-    positiveTests.push(testCase);
+    testCases.push(testCase);
   });
-  return positiveTests;
+  return testCases;
 }
 
 /**
- * Generates negative tests for the validation of request body.
- * Negative tests include test cases which on execution shouldn't get
- * a 2xx http status code from the server.
- * @param {object} requestBodySchema Schema of request body.
+ * Generates negative test cases for the validation of request body.<br>
+ * Negative testcases include test cases which on execution should get
+ * a 4xx or 5xx http status code from the server.
+ * @param {object} schema Schema of request body.
  * @param {object} extras extra keys/fields to be appended to the generated
  *   test case.
- * @return {array<object>} negativeTests
+ * @return {array<object>} negative testcases
  */
-function getNegativeTestsRequestBody(requestBodySchema, extras) {
-  const negativeTests = [];
+function getNegativeTestCaseForRequestBody(schema, extras = {}) {
+  const dataDeficientByDataType = getDataDeficientByDataType(schema);
+  const dataDeficientByEnum = getDataDeficientByEnum(schema);
+  const dataDeficientByNumberLimit = getDataDeficientByNumberLimit(schema);
+  const dataDeficientByRequiredKey = getDataDeficientByRequiredKey(schema);
+  const dataDeficientByStringLength = getDataDeficientByStringLength(schema);
+
   let deficientDatas = [];
-
-  const dataDeficientByDataType =
-    getDataDeficientByDataType(requestBodySchema);
-  const dataDeficientByEnum =
-    getDataDeficientByEnum(requestBodySchema);
-  const dataDeficientByNumberLimit =
-    getDataDeficientByNumberLimit(requestBodySchema);
-  const dataDeficientByRequiredKey =
-    getDataDeficientByRequiredKey(requestBodySchema);
-  const dataDeficientByStringLength =
-    getDataDeficientByStringLength(requestBodySchema);
-
   deficientDatas = deficientDatas.concat(dataDeficientByDataType);
   deficientDatas = deficientDatas.concat(dataDeficientByEnum);
   deficientDatas = deficientDatas.concat(dataDeficientByNumberLimit);
   deficientDatas = deficientDatas.concat(dataDeficientByRequiredKey);
   deficientDatas = deficientDatas.concat(dataDeficientByStringLength);
 
+  const testCases = [];
   deficientDatas.forEach(function(deficientData) {
+    // To send an api request, the requestbody should be of object datatype.
+    if (typeof(deficientData.data) !== DataType.OBJECT) return;
     const testCase = _.merge(deficientData, extras);
-    negativeTests.push(testCase);
+    testCases.push(testCase);
   });
-  return negativeTests;
+  return testCases;
+}
+
+/**
+ * Generates positive test cases for the validation of request header.<br>
+ * Positive testcases include test cases which on execution should get
+ * a 2xx http status code from the server.<br>
+ * There are many types of parameters supported by OAS 3.0 .<br>
+ * Example: query params, path params, header params, cookie params.<br>
+ * The scope of the functionality is limited to only header parameters.
+ * @param {object} parameters Parameter List.
+ * @param {object} extras extra keys/fields to be appended to the generated
+ *   test case.
+ * @return {array<object>} positive testcases
+ */
+function getPostitveTestCaseForRequestHeader(parameters, extras = {}) {
+  let deficientDatasOfAllHeaders = [];
+  parameters = parameters || [];
+  parameters.forEach(function(parameter) {
+    if (parameter.in !== 'header') return;
+
+    const dataDeficientByOptionalKey =
+      getDataDeficientByOptionalKey(parameter.schema);
+
+    let deficientDatas = [];
+    deficientDatas = deficientDatas.concat(dataDeficientByOptionalKey);
+
+    /*
+      deficientDatas contain data of a single header parameter under test.
+      In order to make an api request the other header parameters should be
+      sent along with the header under test.
+      So, we overwrite the deficientData with requestHeaders
+      which contains the header parameter under test.
+      Also, we add an attribute headerName that tells which header parameter is
+      under test.
+    */
+    deficientDatas.forEach(function(deficientData) {
+      const exampleRequestHeader = getMockHeaders(parameters);
+      const deficientRequestHeader = exampleRequestHeader;
+      deficientRequestHeader[parameter.name] = deficientData.data;
+      deficientData.data = deficientRequestHeader;
+      deficientData.headerName = parameter.name;
+    });
+
+    /* Testcase for "missing optional header". */
+    if (parameter.required !== true) {
+      const exampleRequestHeader = getMockHeaders(parameters);
+      const deficientRequestHeader = exampleRequestHeader;
+      delete deficientRequestHeader[parameter.name];
+
+      const deficientData = {};
+      deficientData.headerName = parameter.name;
+      deficientData.data = deficientRequestHeader;
+      deficientData.missingOptionalHeader = parameter.name;
+      deficientDatas.push(deficientData);
+    }
+
+    deficientDatasOfAllHeaders =
+      deficientDatasOfAllHeaders.concat(deficientDatas);
+  });
+
+  const testCases = [];
+  deficientDatasOfAllHeaders.forEach(function(deficientData) {
+    const testCase = _.merge(deficientData, extras);
+    testCases.push(testCase);
+  });
+  return testCases;
+}
+
+/**
+ * Generates negative test cases for the validation of request header.<br>
+ * Negative testcases include test cases which on execution should get
+ * a 4xx or 5xx http status code from the server.<br>
+ * There are many types of parameters supported by OAS 3.0 .<br>
+ * Example: query params, path params, header params, cookie params.<br>
+ * The scope of the functionality is limited to only header parameters.
+ * @param {object} parameters Parameter List.
+ * @param {object} extras extra keys/fields to be appended to the generated
+ *   test case.
+ * @return {array<object>} negative testcases
+ */
+function getNegativeTestCaseForRequestHeader(parameters, extras = {}) {
+  let deficientDatasOfAllHeaders = [];
+  parameters = parameters || [];
+  parameters.forEach(function(parameter) {
+    if (parameter.in !== 'header') return;
+
+    const dataDeficientByDataType =
+      getDataDeficientByDataType(parameter.schema);
+    const dataDeficientByEnum =
+      getDataDeficientByEnum(parameter.schema);
+    const dataDeficientByNumberLimit =
+      getDataDeficientByNumberLimit(parameter.schema);
+    const dataDeficientByRequiredKey =
+      getDataDeficientByRequiredKey(parameter.schema);
+    const dataDeficientByStringLength =
+      getDataDeficientByStringLength(parameter.schema);
+
+    let deficientDatas = [];
+    deficientDatas = deficientDatas.concat(dataDeficientByDataType);
+    deficientDatas = deficientDatas.concat(dataDeficientByEnum);
+    deficientDatas = deficientDatas.concat(dataDeficientByNumberLimit);
+    deficientDatas = deficientDatas.concat(dataDeficientByRequiredKey);
+    deficientDatas = deficientDatas.concat(dataDeficientByStringLength);
+
+    /*
+      deficientDatas contain data of a single header parameter under test.
+      In order to make an api request the other header parameters should be
+      sent along with the header under test.
+      So, we overwrite the deficientData with requestHeaders
+      which contains the header parameter under test.
+      Also, we add an attribute headerName that tells which header parameter is
+      under test.
+    */
+    deficientDatas.forEach(function(deficientData) {
+      const exampleRequestHeader = getMockHeaders(parameters);
+      const deficientRequestHeader = exampleRequestHeader;
+      deficientRequestHeader[parameter.name] = deficientData.data;
+      deficientData.data = deficientRequestHeader;
+      deficientData.headerName = parameter.name;
+    });
+
+    /* Testcase for "missing required header". */
+    if (parameter.required === true) {
+      const exampleRequestHeader = getMockHeaders(parameters);
+      const deficientRequestHeader = exampleRequestHeader;
+      delete deficientRequestHeader[parameter.name];
+
+      const deficientData = {};
+      deficientData.headerName = parameter.name;
+      deficientData.data = deficientRequestHeader;
+      deficientData.missingRequiredHeader = parameter.name;
+      deficientDatas.push(deficientData);
+    }
+
+    deficientDatasOfAllHeaders =
+      deficientDatasOfAllHeaders.concat(deficientDatas);
+  });
+
+  const testCases = [];
+  deficientDatasOfAllHeaders.forEach(function(deficientData) {
+    const testCase = _.merge(deficientData, extras);
+    testCases.push(testCase);
+  });
+  return testCases;
 }
 
 /**
@@ -107,71 +245,102 @@ function getNegativeTestsRequestBody(requestBodySchema, extras) {
  * @return {object} testSuite
  */
 function buildTestSuite(oasDoc) {
-  logger['info']('buildTestSuite() invoked.');
-
   const testSuite = {};
-  testSuite.createdAtTimeStamp = timestamp();
-  testSuite.createdAtUnixTimeStamp = unixTimestamp.now();
+  testSuite.createdAtTimeStamp = new Date();
 
   /*
-    oasDoc is being stored in the testSuite for:
-    1) Validation of the response(body/header) against their schema during the
-        phase of execution of test cases.
-    2) Dynamically collecting the security requirements like basic auth,
-        API keys for testing the api endpoints of user's interest.
+    oasDoc is being stored in the testSuite for the following reasons:
+    1) Validation of the response(body/header) against their schema stored
+        in oasDoc during the phase of execution of test cases.
+    2) To dynamically capture the security requirements like
+        basic auth, API keys for testing the api endpoints of user's interest.
   */
-  testSuite.oasDoc = JSON.stringify(oasDoc);
+  testSuite.oasDoc = oasDoc;
 
-  let apiEndpoints = getApiEndpoints(oasDoc);
-
-  // For testing purpose. [TO BE REMOVED]
-  apiEndpoints = [{'path': '/pet', 'httpMethod': 'put'}];
+  const apiEndpoints = getApiEndpoints(oasDoc);
   let apiTestSuites = [];
 
-  // eslint-disable-next-line no-undef
-  apiEndpoints.forEach(function({path, httpMethod} = apiEndpoint) {
+  apiEndpoints.forEach(function({path, httpMethod}) {
     logger['info'](`Creating apiTestSuite for ${httpMethod} ${path}`);
 
     const apiSchema = oasDoc.paths[path][httpMethod];
     const apiTestSuite = {};
-    apiTestSuite.path = path;
-    apiTestSuite.httpMethod = httpMethod;
+    apiTestSuite.apiEndpoint = {
+      path,
+      httpMethod,
+    };
 
-    /**
-     * OAS 3.0 supports multiple request body contents and media types like
-     * JSON, XML, form data, plain text.
-     * Currently, we support only the JSON format.
-     */
+    /*
+      OAS 3.0 supports multiple request body contents and media types like
+      JSON, XML, form data, plain text.
+      Currently, we support only the JSON format.
+    */
+
     const requestBodySchema =
       apiSchema.requestBody.content['application/json'].schema;
-    apiTestSuite.goodRequestBody = getMockData(requestBodySchema);
-
     const parameters = apiSchema.parameters;
-    apiTestSuite.goodRequestHeaders = getMockHeaders(parameters);
+    apiTestSuite.examples = {
+      requestBody: getMockData(requestBodySchema),
+      requestHeader: getMockHeaders(parameters),
+    };
 
-    apiTestSuite.positiveTests =
-    getPostitveTestsRequestBody(requestBodySchema, {testForRequestBody: true});
-    apiTestSuite.negativeTests =
-    getNegativeTestsRequestBody(requestBodySchema, {testForRequestBody: true});
+    let positiveTestCases = [];
+    positiveTestCases = positiveTestCases.concat(
+        getPostitveTestCaseForRequestBody(
+            requestBodySchema,
+            {testForRequestBody: true}));
+    positiveTestCases = positiveTestCases.concat(
+        getPostitveTestCaseForRequestHeader(
+            parameters,
+            {testForRequestHeader: true}));
+
+    let negativeTestCases = [];
+    negativeTestCases = negativeTestCases.concat(
+        getNegativeTestCaseForRequestBody(
+            requestBodySchema,
+            {testForRequestBody: true}));
+    negativeTestCases = negativeTestCases.concat(
+        getNegativeTestCaseForRequestHeader(
+            parameters,
+            {testForRequestHeader: true}));
+
+    apiTestSuite.testCases = {
+      positiveTestCases,
+      negativeTestCases,
+    };
 
     apiTestSuites = apiTestSuites.concat(apiTestSuite);
   });
+  testSuite.apiTestSuites = apiTestSuites;
 
   logger['info']('TestSuite created successfully!!');
-
-  testSuite.apiTestSuites = apiTestSuites;
   return testSuite;
 }
 
-function generateTestSuiteFile(oasDoc) {
-  const testSuite = buildTestSuite(oasDoc);
-  console.log(testSuite);
-  // Logic to save the testSuite built as {input_filename}.testsuite.json
-  // in the output path specified by the user.
+/**
+ * Builds the testSuite and save the testSuite generated in the
+ * output location specified by user.
+ * @param {object} oasDoc OAS 3.0 Document.
+ */
+function createTestSuiteFile(oasDoc) {
+  let testSuite = buildTestSuite(oasDoc);
+  const testSuiteFileName =snakeCase(oasDoc.info.title) + '_' +
+    oasDoc.info.version + '_testsuite.json';
+  // [TODO] Should save the testsuite file in user's output location.
+  testSuite = JSON.stringify(testSuite);
+  fs.writeFile(testSuiteFileName, testSuite, function(err) {
+    if (err) {
+      logger['error']('Failure in saving the testsuite file generated. ');
+    }
+    logger['info'](`${testSuiteFileName} saved successfully!!`);
+  });
 }
 
 module.exports = {
-  generateTestSuiteFile,
+  buildTestSuite,
+  createTestSuiteFile,
+  getPostitveTestCaseForRequestHeader,
+  getNegativeTestCaseForRequestHeader,
+  getPostitveTestCaseForRequestBody,
+  getNegativeTestCaseForRequestBody,
 };
-
-// [DEV] remove get requests in the oasDoc example.

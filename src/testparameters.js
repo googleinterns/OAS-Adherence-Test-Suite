@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-// Add @module and @overview
+/** @module testparameters */
+/**
+ * @fileoverview Contains functions that helps in loading the necessary test
+ * parameters like testSuite, auth credentials (API Key, Basic auth credentails)
+ * , apiEndpoints to be tested which are essential for the execution of test.
+ */
+
 const path = require('path');
 const fs = require('fs');
 const {logger} = require('./log');
@@ -23,18 +29,23 @@ const {
   isBasicAuthRequired,
 } = require('./auth');
 
+/**
+ * Loads test parameters which are essential for the execution of test cases.
+ * Test parameters include testSuite, auth credentials(API Key,
+ * Basic auth credentails), apiEndpoints to be tested.
+ * @param {Array<{path: string, httpMethod: string}>} apiEndpoints apiEndpoints
+ */
 function loadTestParameters(apiEndpoints) {
   let testSuiteFile;
   try {
     testSuiteFile = fs.readFileSync(path.resolve(__dirname,
-        '../swagger_petstore_1.0.5_testsuite.json'), 'utf8');
+        '../examples/testsuites/bad_petstore_1.0_testsuite.json'), 'utf8');
   } catch (err) {
     logger['error']('Unable to load the test suite file!!!');
     return;
   }
 
   testSuiteFile = JSON.parse(testSuiteFile);
-  testSuiteFile.oasDoc = JSON.parse(testSuiteFile.oasDoc);
 
   const apiKeysRequired = getApiKeyList(apiEndpoints, testSuiteFile.oasDoc);
   // Get API keys from the user.
@@ -59,16 +70,6 @@ function loadTestParameters(apiEndpoints) {
   };
   console.log('Exported Test Params Successfully!!');
 }
-
-// function runTest() {
-//   const Mocha = require('mocha');
-//   const mocha = new Mocha();
-//   // https://github.com/mochajs/mocha/issues/2783
-//   delete require.cache[path.resolve(__dirname, './test_runner.js')];
-//   mocha.addFile(path.resolve(__dirname, './test_runner.js'));
-//   mocha.run();
-//   console.log('Finished Test cases');
-// }
 
 module.exports = {
   loadTestParameters,
