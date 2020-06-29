@@ -10,8 +10,5 @@
     },
     "plugins": [
         "vue"
-    ],
-    "rules": {
-        "require-jsdoc" : 0
-    }
+    ]
 }

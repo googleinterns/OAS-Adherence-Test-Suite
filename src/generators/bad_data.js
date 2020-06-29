@@ -20,8 +20,8 @@
  * in data type/enum/number limit/optional key/required key/string length.
  */
 
-const {getMockData} = require('./adequate_datagen');
-const {getRandomString} = require('../utils');
+const {getMockData} = require('./good_data');
+const {getRandomString} = require('../utils/app');
 const {DataType} = require('../constants');
 
 const DUMMY = [{

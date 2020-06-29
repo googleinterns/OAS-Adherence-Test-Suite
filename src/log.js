@@ -20,17 +20,23 @@
  */
 
 const {createLogger, format, transports} = require('winston');
-const {combine, timestamp, label} = format;
+const {combine} = format;
 
 /**
- * customLogger is a winston object which logs above 'debug' level.
+ * customLogger is a winston object which logs above 'info' level by default.
+ * generateTestSuite() and validateApiEndpoints() in src/actions.js can change
+ * the level to 'verbose'.
+ * Logging Levels: [error, warn, info, http, verbose, debug, silly]
+ * Highest Priority = 'error', Lowest Priority = 'silly'.
  */
 const customLogger = createLogger({
-  level: 'debug',
+  level: 'info',
   format: combine(
-      label({label: 'ATS v1'}),
-      timestamp(),
-      format.prettyPrint(),
+      format.colorize(),
+      format.simple(),
+      format.printf(function(info) {
+        return `${info.message}`;
+      }),
   ),
   transports: [new transports.Console()],
 });
@@ -38,4 +44,3 @@ const customLogger = createLogger({
 module.exports = {
   logger: customLogger,
 };
-

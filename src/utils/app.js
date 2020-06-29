@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-/** @module utils */
+/** @module utils/app */
 /**
- * @fileoverview Contains generic utility functions used throught the code.
+ * @fileoverview contains generic utility functions which is not scoped
+ * to a particular feature/domain. In other words, it is scoped to
+ * the whole app.
  */
 
 /**
@@ -51,7 +53,23 @@ function getRandomString(length) {
   return result;
 }
 
+/**
+ * returns a string with lowercase string with underscores between words.
+ * @param {string} sentence
+ * @return {string} snake-cased sentence
+ */
+function snakeCase(sentence) {
+  let result = '';
+  const words = sentence.split(' ');
+  result += words.shift().toLowerCase();
+  words.forEach(function(word) {
+    result += '_' + word.toLowerCase();
+  });
+  return result;
+}
+
 module.exports = {
   getRandomNumber,
   getRandomString,
+  snakeCase,
 };

@@ -21,13 +21,12 @@
  * api endpoint and creating a testSuite file.
  */
 
-const {snakeCase} = require('snake-case');
 const fs = require('fs');
 const _ = require('lodash');
-const {getApiEndpoints} = require('../apiutils');
+const {getApiEndpoints} = require('../utils/oas');
 const {logger} = require('../log');
 const {DataType} = require('../constants');
-const {getMockData, getMockHeaders} = require('./adequate_datagen');
+const {getMockData, getMockHeaders} = require('./good_data');
 const {
   getDataDeficientByDataType,
   getDataDeficientByEnum,
@@ -35,7 +34,7 @@ const {
   getDataDeficientByOptionalKey,
   getDataDeficientByRequiredKey,
   getDataDeficientByStringLength,
-} = require('./deficient_datagen');
+} = require('./bad_data');
 
 /**
  * Generates positive test cases for the validation of request body.<br>
@@ -261,7 +260,7 @@ function buildTestSuite(oasDoc) {
   let apiTestSuites = [];
 
   apiEndpoints.forEach(function({path, httpMethod}) {
-    logger['info'](`Creating apiTestSuite for ${httpMethod} ${path}`);
+    logger.verbose(`Creating apiTestSuite for ${httpMethod} ${path}`);
 
     const apiSchema = oasDoc.paths[path][httpMethod];
     const apiTestSuite = {};
@@ -308,31 +307,33 @@ function buildTestSuite(oasDoc) {
       positiveTestCases,
       negativeTestCases,
     };
-
+    logger.verbose(`TestSuite for ${httpMethod} ${path} created successfully.`);
     apiTestSuites = apiTestSuites.concat(apiTestSuite);
   });
   testSuite.apiTestSuites = apiTestSuites;
 
-  logger['info']('TestSuite created successfully!!');
   return testSuite;
 }
 
 /**
  * Builds the testSuite and save the testSuite generated in the
  * output location specified by user.
- * @param {object} oasDoc OAS 3.0 Document.
+ * @param {object} oasDoc oas 3.0 document.
+ * @param {string} testSuitePath path where the generated testsuite is saved
  */
-function createTestSuiteFile(oasDoc) {
+function createTestSuiteFile(oasDoc, testSuitePath) {
   let testSuite = buildTestSuite(oasDoc);
-  const testSuiteFileName =snakeCase(oasDoc.info.title) + '_' +
-    oasDoc.info.version + '_testsuite.json';
-  // [TODO] Should save the testsuite file in user's output location.
   testSuite = JSON.stringify(testSuite);
-  fs.writeFile(testSuiteFileName, testSuite, function(err) {
+
+  // [DEV] Validate whether the file present in testSuitePath is a json file.
+  fs.writeFile(testSuitePath, testSuite, function(err) {
     if (err) {
-      logger['error']('Failure in saving the testsuite file generated. ');
+      logger.error('\nFailure in saving the testsuite file generated in'.red +
+        `${testSuitePath}`.red);
+      return;
     }
-    logger['info'](`${testSuiteFileName} saved successfully!!`);
+    logger.info('\nTestSuite created and saved successfully at '.magenta +
+        `${testSuitePath}`.magenta);
   });
 }
 
