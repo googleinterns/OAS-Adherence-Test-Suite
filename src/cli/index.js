@@ -17,15 +17,14 @@
  */
 
 const {program} = require('commander');
-const readPkgUp = require('read-pkg-up');
 const {
   generateTestSuite,
   validateApiEndpoints,
-} = require('./cli/actions');
+} = require('./actions');
 
-const manifest = readPkgUp.sync({cwd: require.resolve('.')});
+const manifest = require('../../package.json');
 program
-    .version(manifest ? manifest.packageJson.version : 'unknown',
+    .version(manifest.version ? manifest.version : 'unknown',
         '-v, --version',
         'outputs the version of ats');
 

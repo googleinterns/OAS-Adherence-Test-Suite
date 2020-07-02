@@ -29,7 +29,7 @@ const {
   createTestSuiteFile,
   buildTestSuite,
 } = require('../generators/test_data');
-const {runTestSuite} = require('../testrunner');
+const {runTestSuite} = require('../testsuite_runner');
 const {buildConfig, getConfig, upsertConfig} = require('../utils/config');
 const {oasPathPrompt, testSuitePathPrompt} = require('./prompts');
 

@@ -189,7 +189,7 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
       let response;
       response = await usernamePrompt();
       basicAuth = {};
-      basicAuth.userName = response.userName;
+      basicAuth.username = response.userName;
       // eslint-disable-next-line no-constant-condition
       while (true) {
         response = await passwordPrompt();
@@ -241,7 +241,6 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
     timeout,
   };
   logger.verbose('\nExported test params successfully.');
-  return;
 }
 
 module.exports = {

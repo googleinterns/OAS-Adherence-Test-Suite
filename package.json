@@ -2,9 +2,9 @@
   "name": "ats",
   "version": "1.0.0",
   "description": "**This is not an officially supported Google product.**",
-  "main": "src/index.js",
+  "main": "./src/cli/index.js",
   "preferGlobal": true,
-  "bin": "./src/index.js",
+  "bin": "./src/cli/index.js",
   "directories": {
     "doc": "docs",
     "example": "examples",

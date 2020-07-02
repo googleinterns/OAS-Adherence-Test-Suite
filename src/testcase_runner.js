@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-/** @module testsuite_runner */
-/**
- * @fileoverview contains functions that runs testsuite, testcase and
- * display the test results with errors if any.
- */
+// Add file overview
 
+// eslint-disable-next-line no-unused-vars
+const colors = require('colors');
+const {validateDataAgainstSchema} = require('./validator');
+const {logger} = require('./log');
 const axios = require('axios');
 /*
   axios.all() method takes promises as an input, and returns a single promise as
@@ -37,13 +37,6 @@ axiosRetry(axios, {retries: 3, retryCondition: function(err) {
   return (err.code === 'ECONNABORTED');
 }});
 
-// eslint-disable-next-line no-unused-vars
-const colors = require('colors');
-const {logger} = require('./log');
-const {performance} = require('perf_hooks');
-const equals = require('is-equal-shallow');
-const {validateDataAgainstSchema} = require('./validator');
-
 const testVerdictCounter = {
   pass: 0,
   fail: 0,
@@ -55,30 +48,6 @@ const testVerdictCounter = {
 function resetTestVerdictCounter() {
   testVerdictCounter.pass = 0;
   testVerdictCounter.fail = 0;
-}
-
-/**
- * displays test summary
- */
-function displayTestSummary() {
-  logger.info('\nTest Summary '.grey.bold);
-  logger.info('passing: '.grey + `${testVerdictCounter.pass} `.green);
-  logger.info('failing: '.grey + `${testVerdictCounter.fail} `.red);
-  let adherencePercentage = (testVerdictCounter.pass/
-      (testVerdictCounter.pass + testVerdictCounter.fail))*100;
-  adherencePercentage = Math.round(adherencePercentage * 100) / 100;
-  logger.info('adherence percentage: '.grey + `${adherencePercentage}`.cyan);
-}
-
-/**
- * displays the time taken for the execution of testsuite
- * @param {number} startTime time at which execution of testsuite started
- * @param {number} endTime time at which execution of testsuite ended
- */
-function displayTimeTaken(startTime, endTime) {
-  let millisecond = endTime - startTime;
-  millisecond = Math.round(millisecond * 100) / 100;
-  logger.info('time taken: '.grey + `${millisecond} ms`);
 }
 
 /**
@@ -99,12 +68,13 @@ function displayTestResults(testResults) {
       Filter out unnecessary data from the testcase ,
       in order to present only the necessary details to the user.
     */
-    delete testCase.data;
-    delete testCase.testForRequestBody;
+    const necessaryTestCaseDetails = testCase;
+    delete necessaryTestCaseDetails.data;
+    delete necessaryTestCaseDetails.testForRequestBody;
 
     const verdictLog =
         ((testVerdict.final === 'pass') ? 'PASS'.green : 'FAIL'.red) + ' ' +
-        JSON.stringify(testCase).grey.bold;
+        JSON.stringify(necessaryTestCaseDetails).grey.bold;
     const statusCodeLog = 'status codes: ' +
         `[received: ${statusCodes.received}, ` +
         `expected: ${JSON.stringify(statusCodes.expected)} ]`;
@@ -139,54 +109,15 @@ function displayTestResults(testResults) {
 }
 
 /**
- * executes testcases and generates test results for a particular api endpoint
- * @param {array<object>} testCases
- * @param {array<string>} expectedStatusCodes
- * @param {object} apiTestSuite  testsuites of an api endpoint
- * @param {object} oasDoc  oas 3.0 document
- * @param {object} axiosConfig contains configs of an axios request
+ *
+ * @param {*} testCases
+ * @param {*} responses
+ * @param {*} expectedStatusCodes
+ * @param {*} responseSchemas
+ * @return {object}
  */
-async function runTestCase(testCases, expectedStatusCodes,
-    apiTestSuite, oasDoc, axiosConfig) {
-  const {apiEndpoint} = apiTestSuite;
-  const {
-    path,
-    httpMethod,
-  } = apiEndpoint;
-  const exampleRequestBody = apiTestSuite.examples.requestBody;
-  const exampleRequestHeaders = apiTestSuite.examples.requestHeaders;
-  const responseSchemas = oasDoc.paths[path][httpMethod].responses;
-
-  const requestPromises = [];
-  for (const testCase of testCases) {
-    let requestBody;
-    let requestHeaders;
-    if (testCase.testForRequestBody) {
-      requestBody = testCase.data;
-      requestHeaders = exampleRequestHeaders;
-    } else if (testCase.testForRequestHeaders) {
-      requestHeaders = testCase.data;
-      requestBody = exampleRequestBody;
-    }
-    requestPromises.push(axios({
-      url: apiEndpoint.path,
-      baseURL: axiosConfig.baseURL,
-      method: httpMethod,
-      headers: requestHeaders,
-      data: requestBody,
-      timeout: axiosConfig.timeout || 5000,
-    }));
-  }
-
-  let responses = [];
-  await axios.all(requestPromises)
-      .then(axios.spread(function(...responsePromises) {
-        responses = responsePromises;
-      }))
-      .catch(function(err) {
-        logger.error(err);
-      });
-
+function buildTestResults(testCases, responses, expectedStatusCodes,
+    responseSchemas) {
   const testResults = [];
   for (let index = 0; index < responses.length; index++) {
     const testCase = testCases[index];
@@ -287,63 +218,84 @@ async function runTestCase(testCases, expectedStatusCodes,
       errors,
     });
   }
-
-  displayTestResults(testResults);
+  return testResults;
 }
 
 /**
- * Unloads the test paramters loaded by loadTestParameters() and runs
- * testcases against api endpoints of user's interest
+ * executes testcases and generates test results for a particular api endpoint
+ * @param {array<object>} testCases
+ * @param {array<string>} expectedStatusCodes
+ * @param {object} apiTestSuite  testsuites of an api endpoint
+ * @param {object} oasDoc  oas 3.0 document
+ * @param {object} axiosConfig contains configs of an axios request
  */
-async function runTestSuite() {
-  const {testParams} = require('./testparameters');
+async function runTestCase(testCases, expectedStatusCodes,
+    apiTestSuite, oasDoc, axiosConfig) {
+  const {apiEndpoint} = apiTestSuite;
   const {
-    baseURL,
-    apiEndpointsToTest,
-    testSuite,
-    basicAuth,
-    apiKeys,
-    timeout,
-  } = testParams;
-  const oasDoc = testSuite.oasDoc;
-  const apiTestSuites = testSuite.apiTestSuites;
-  const axiosConfig = {baseURL, timeout};
+    path,
+    httpMethod,
+  } = apiEndpoint;
+  const exampleRequestBody = apiTestSuite.examples.requestBody;
+  const exampleRequestHeaders = apiTestSuite.examples.requestHeaders;
+  const responseSchemas = oasDoc.paths[path][httpMethod].responses;
 
-  resetTestVerdictCounter();
-
-  const startTime = performance.now();
-  for (const apiTestSuite of apiTestSuites) {
-    const {apiEndpoint} = apiTestSuite;
-
-    // Check if the apiEndpoint is being asked to test by the user.
-    const toBeTested = apiEndpointsToTest.some(function(apiEndpointToTest) {
-      return equals(apiEndpoint, apiEndpointToTest);
-    });
-    if (!toBeTested) return;
-
-    logger.info('\nTesting  '.grey.bold +
-      `${apiEndpoint.httpMethod}  ${baseURL}${apiEndpoint.path}`.cyan);
-    const positiveTestCases = apiTestSuite.testCases.positiveTestCases;
-    await runTestCase(positiveTestCases, ['2xx'], apiTestSuite,
-        oasDoc, axiosConfig);
-    const negativeTestCases = apiTestSuite.testCases.negativeTestCases;
-    await runTestCase(negativeTestCases, ['4xx', '5xx'], apiTestSuite,
-        oasDoc, axiosConfig);
+  const requestPromises = [];
+  for (const testCase of testCases) {
+    let requestBody;
+    let requestHeaders;
+    if (testCase.testForRequestBody) {
+      requestBody = testCase.data;
+      requestHeaders = exampleRequestHeaders;
+    } else if (testCase.testForRequestHeaders) {
+      requestHeaders = testCase.data;
+      requestBody = exampleRequestBody;
+    }
+    requestPromises.push(axios({
+      url: apiEndpoint.path,
+      baseURL: axiosConfig.baseURL,
+      method: httpMethod,
+      headers: requestHeaders,
+      data: requestBody,
+      timeout: axiosConfig.timeout || 5000,
+    }));
   }
 
-  /*
-    Explanation for skipping response body/headers validation is shown to the
-    user after the completion of testing and displaying the test results.
-  */
-  logger.verbose('Reason for skipping response body/headers validation' +
-    ' is because their schemas are not present in the oas document provided.');
+  let responses = [];
+  await axios.all(requestPromises)
+      .then(axios.spread(function(...responsePromises) {
+        responses = responsePromises;
+      }))
+      .catch(function(err) {
+        logger.error(err);
+      });
 
-  displayTestSummary();
-  const endTime = performance.now();
-  displayTimeTaken(startTime, endTime);
+  const testResults = buildTestResults(testCases, responses,
+      expectedStatusCodes, responseSchemas);
+  return testResults;
 }
 
-module.exports = {
-  runTestSuite,
-  runTestCase,
-};
+process.on('message', async function(message) {
+  const {baseURL, basicAuth, apiKeys, timeout, apiTestSuite, oasDoc}= message;
+  const {apiEndpoint} = apiTestSuite;
+  const axiosConfig = {baseURL, basicAuth, apiKeys, timeout};
+
+  resetTestVerdictCounter();
+  let testResults = [];
+
+  const positiveTestCases = apiTestSuite.testCases.positiveTestCases;
+  testResults = testResults.concat(await runTestCase(positiveTestCases,
+      ['2xx'], apiTestSuite, oasDoc, axiosConfig));
+
+  const negativeTestCases = apiTestSuite.testCases.negativeTestCases;
+  testResults = testResults.concat(await runTestCase(negativeTestCases,
+      ['4xx', '5xx'], apiTestSuite, oasDoc, axiosConfig));
+
+  logger.info('\nTest Results for  '.grey.bold +
+    `${apiEndpoint.httpMethod}  ${baseURL}${apiEndpoint.path}`.cyan);
+
+  displayTestResults(testResults);
+
+  process.send(testVerdictCounter);
+  process.exit();
+});
