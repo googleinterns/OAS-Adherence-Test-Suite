@@ -23,26 +23,19 @@
 
 const {logger} = require('./log');
 const {snakeCase} = require('./utils/app');
-const fs = require('fs');
-const path = require('path');
 const _ = require('lodash');
-const {
-  FileType,
-  fileTypePrompt,
-  oasPathPrompt,
-  testSuitePathPrompt,
-  apiEndpointPrompt,
-  usernamePrompt,
-  passwordPrompt,
-  apiKeyPrompt,
-  upsertConfigPrompt,
-  configDetailsPrompt,
-} = require('./cli/prompts');
+const {BaseConfig, prompt} = require('./cli/prompts');
 const {upsertConfig} = require('./utils/config');
-const {getApiEndpoints} =require('./utils/oas');
+const {getApiEndpoints, parseOASDoc} =require('./utils/oas');
+const {isValidJSONFile, getJSONData} = require('./utils/app');
 const {buildTestSuite} = require('./generators/test_data');
 const {getApiKeyList, isBasicAuthRequired} = require('./auth');
-const {parseOASDoc} = require('./utils/oas');
+
+/* Supported Input File Types*/
+const FileType = {
+  OAS_DOC: 'oas document file',
+  TESTSUITE_FILE: 'testsuite file',
+};
 
 /**
  * Loads test parameters which are essential for the execution of test cases.
@@ -74,23 +67,22 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
   let oasDoc;
   if (testSuite == null) {
     if (config.testSuitePath) {
-      try {
-        testSuite = fs.readFileSync(config.testSuitePath, 'utf8');
-        testSuite = JSON.parse(testSuite);
-        oasDoc = testSuite.oasDoc;
+      if (isValidJSONFile(config.testSuitePath)) {
+        testSuite = getJSONData(config.testSuitePath);
         logger.verbose('testSuite uploaded successfully.'.magenta);
-      } catch (err) {
+        oasDoc = testSuite.oasDoc;
+      } else {
         logger.error('testSuite upload failed.'.red +
           '(check path of testsuite in the config file)'.red);
         return;
       }
     } else {
-      const response = await fileTypePrompt();
+      const choices = [FileType.OAS_DOC, FileType.TESTSUITE_FILE];
+      const response = await prompt(BaseConfig.fileType, {choices});
       switch (response.fileType) {
         case FileType.OAS_DOC: {
-          const response = await oasPathPrompt();
-          oasDoc = fs.readFileSync(response.oasPath, 'utf8');
-          oasDoc = JSON.parse(oasDoc);
+          const response = await prompt(BaseConfig.oasPath);
+          oasDoc = getJSONData(response.oasPath);
           oasDoc = await parseOASDoc(oasDoc);
           if (oasDoc == null) {
             const errorObject = {
@@ -103,19 +95,11 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
           break;
         }
         case FileType.TESTSUITE_FILE: {
-          const response = await testSuitePathPrompt();
-          try {
-            testSuite = fs.readFileSync(response.testSuitePath, 'utf8');
-            testSuite = JSON.parse(testSuite);
-            oasDoc = testSuite.oasDoc;
-            extraConfig.testSuitePath = response.testSuitePath;
-          } catch (err) {
-            const errorObject = {
-              'Error Type': 'testsuite parse fail',
-              'Error Message': 'invalid testsuite document',
-            };
-            throw errorObject;
-          }
+          const response = await prompt(BaseConfig.testSuitePath);
+          testSuite = getJSONData(response.testSuitePath);
+          logger.verbose('testSuite uploaded successfully.'.magenta);
+          oasDoc = testSuite.oasDoc;
+          extraConfig.testSuitePath = response.testSuitePath;
           break;
         }
       }
@@ -151,7 +135,8 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
       const allApiEndpointsString = allApiEndpoints.map(function(apiEndpoint) {
         return JSON.stringify(apiEndpoint);
       });
-      const response = await apiEndpointPrompt(allApiEndpointsString);
+      const response = await prompt(BaseConfig.apiEndpoints,
+          {choices: allApiEndpointsString});
       const apiEndpointsString = response.apiEndpoints;
       apiEndpoints = apiEndpointsString.map(function(apiEndpoint) {
         return JSON.parse(apiEndpoint);
@@ -174,7 +159,8 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
   });
   const requiredApiKeys = getApiKeyList(apiEndpoints, oasDoc);
   for (const requiredApiKeyName of requiredApiKeys) {
-    const response = await apiKeyPrompt(requiredApiKeyName);
+    const response = await prompt(BaseConfig.apiKey,
+        {message: `[API Key] ${requiredApiKeyName}`});
     apiKeysObject[requiredApiKeyName] = response.apiKeyValue;
     extraConfig.apiKeys = extraConfig.apiKeys || [];
     extraConfig.apiKeys.push({
@@ -186,13 +172,12 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
   if (isBasicAuthRequired(apiEndpoints, oasDoc) && basicAuth == null) {
     if (config.basicAuth) basicAuth = config.basicAuth;
     else {
-      let response;
-      response = await usernamePrompt();
+      const response = await prompt(BaseConfig.username);
       basicAuth = {};
-      basicAuth.username = response.userName;
+      basicAuth.username = response.username;
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        response = await passwordPrompt();
+        const response = await prompt(BaseConfig.password);
         if (response.password !== response.confirmPassword) {
           logger.error('password and confirm password does not match'.red);
         } else {
@@ -209,8 +194,8 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
   }
 
   if (!_.isEmpty(extraConfig)) {
-    const response = await upsertConfigPrompt();
-    if (response.upsertConfig) {
+    const response = await prompt(BaseConfig.upsertConfig);
+    if (response.upsertConfig == true) {
       const keys = Object.keys(extraConfig);
       keys.forEach(function(key) {
         if (key == 'apiKeys') {
@@ -224,11 +209,12 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
         }
         config[key] = extraConfig[key];
       });
-      const response = await configDetailsPrompt();
-      const configDirectoryPath = response.configDirectoryPath;
-      const configFileName = snakeCase(`${response.configFileName}.json`);
-      const configPath = path.join(configDirectoryPath, configFileName);
-      upsertConfig(config, configPath);
+
+      const defualtConfigFilePath = require('os').homedir() +
+        snakeCase(`config ${new Date().toDateString()}`);
+      const response = await prompt(BaseConfig.configFilePath,
+          {default: defualtConfigFilePath});
+      upsertConfig(config, response.configFilePath);
     }
   }
 

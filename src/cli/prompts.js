@@ -21,108 +21,53 @@
  */
 
 const inquirer = require('inquirer');
-const fs = require('fs');
-const {snakeCase} = require('../utils/app');
+const {isValidJSONFile} = require('../utils/app');
 
-/* Supported Input File Types*/
-const FileType = {
-  OAS_DOC: 'oas document file',
-  TESTSUITE_FILE: 'testsuite file',
-};
-
-/**
- * prompts the user with a list of supported input file types.
- * @return {promise}
- */
-function fileTypePrompt() {
-  return inquirer.prompt({
-    type: 'list',
-    name: 'fileType',
-    message: 'choose an input file type',
-    choices: [
-      FileType.OAS_DOC,
-      FileType.TESTSUITE_FILE,
-    ],
-  });
-}
-
-/**
- * prompts the user to provide a valid oas doc path.
- * @return {promise}
- */
-function oasPathPrompt() {
-  return inquirer.prompt({
+/*
+  BaseConfig contains properties which have static values and that provides
+  information about the type of prompt, response variables etc..
+  Properties which take dynamic values (Example: choices) are sent as a
+  different parameter called extraConfig to the prompt function.
+*/
+const BaseConfig = {
+  oasPath: {
     type: 'input',
     name: 'oasPath',
     message: 'oas document path',
-    validate: function(oasPath) {
-      try {
-        let oasDoc = fs.readFileSync(oasPath, 'utf8');
-        // eslint-disable-next-line no-unused-vars
-        oasDoc = JSON.parse(oasDoc);
-        return true;
-      } catch (err) {
-        return 'Please enter a valid path for oas 3.0 document';
-      }
+    validate: function(path) {
+      return (isValidJSONFile(path)) ? true :
+        'Please enter a valid path for oas 3.0 document';
     },
-  });
-}
-
-/**
- * prompts the user to provide a valid test suite path.
- * @return {promise}
- */
-function testSuitePathPrompt() {
-  return inquirer.prompt({
+  },
+  testSuitePath: {
     type: 'input',
     name: 'testSuitePath',
     message: 'path of testsuite file',
-    validate: function(testSuitePath) {
-      try {
-        let testSuite = fs.readFileSync(testSuitePath, 'utf8');
-        // eslint-disable-next-line no-unused-vars
-        testSuite = JSON.parse(testSuite);
-        return true;
-      } catch (err) {
-        return 'Please enter a valid path for testsuite file';
-      }
+    validate: function(path) {
+      return (isValidJSONFile(path)) ? true :
+        'Please enter a valid path for testsuite file';
     },
-  });
-}
-
-/**
- * prompts the user to select/choose the api endpoints which needs to be tested.
- * @param {array<string>} apiEndpoints
- * @return {promise}
- */
-function apiEndpointPrompt(apiEndpoints) {
-  return inquirer.prompt({
+  },
+  fileType: {
+    type: 'list',
+    name: 'fileType',
+    message: 'choose an input file type',
+  },
+  apiEndpoints: {
     type: 'checkbox',
-    message: 'select api endpoints',
     name: 'apiEndpoints',
-    choices: apiEndpoints,
-  });
-}
-
-/**
- * prompts the user to provide username as part of basic auth credentials.
- * @return {promise}
- */
-function usernamePrompt() {
-  return inquirer.prompt({
+    message: 'select api endpoints',
+  },
+  apiKey: {
     type: 'input',
-    name: 'userName',
+    name: 'apiKeyValue',
+  },
+  username: {
+    type: 'input',
+    name: 'username',
     message: 'username',
-  });
-}
-
-/**
- * prompts the user to provide password and confirm password
- * as part of basic auth credentials.
- * @return {promise}
- */
-function passwordPrompt() {
-  return inquirer.prompt([
+  },
+  password: [
     {
       type: 'password',
       name: 'password',
@@ -133,68 +78,60 @@ function passwordPrompt() {
       name: 'confirmPassword',
       message: 'confirm password',
     },
-  ]);
-}
-
-/**
- * prompts the user to provide the value of an API key.
- * @param {string} apiKey name of the API key
- * @return {promise}
- */
-function apiKeyPrompt(apiKey) {
-  return inquirer.prompt({
-    type: 'input',
-    name: 'apiKeyValue',
-    message: `[API Key] ${apiKey}`,
-  });
-}
-
-/**
- * prompts the user with a Y/n question to whether update/create a config file.
- * @return {promise}
- */
-function upsertConfigPrompt() {
-  return inquirer.prompt({
+  ],
+  upsertConfig: {
     type: 'confirm',
     name: 'upsertConfig',
     message: 'want to update/create config file',
-  });
-}
+  },
+  configFilePath: {
+    type: 'input',
+    name: 'configFilePath',
+    message: 'config file path',
+  },
+};
 
 /**
- * prompts the user to provide or use the defaults of config file directory path
- * and config file name.
+ * Prompts the users with differnt types of questions.
+ * Types of Questions: confirm(Y/n), to provide input, to select from a
+ * list/checkbox etc..
+ * Similar to inquirer.prompt(), our custom prompt function takes a set of
+ * questions as an array argument or a single question as an object argument.
+ * @param {object | array<object>} baseConfig Contains properties which have
+ *      static values and constitute to the promptConfig. Example: 'type'
+ * @param {object | array<object>} extraConfig Contains properties which have
+ *      dynamic values and constitute to the promptConfig. Example: 'choices'
  * @return {promise}
  */
-function configDetailsPrompt() {
-  const defaultConfigFileName =
-    snakeCase(`config ${new Date().toDateString()}`);
-  const defaultConfigDirectoryPath = require('os').homedir();
-  return inquirer.prompt([
-    {
-      type: 'input',
-      name: 'configDirectoryPath',
-      message: 'config directory path',
-      default: defaultConfigDirectoryPath,
-    },
-    {
-      type: 'input',
-      name: 'configFileName',
-      message: 'config file name',
-      default: defaultConfigFileName,
-    },
-  ]);
+function prompt(baseConfig, extraConfig = {}) {
+  /*
+    prompt can take an array of baseConfigs, extraConfigs which corresponds to
+    a set of questions rather than a single question.
+    In order to avoid writing concrete code for handling each and every case,
+    we cast the object into an array.
+  */
+  if (!Array.isArray(baseConfig)) {
+    baseConfig = [baseConfig];
+    extraConfig = [extraConfig];
+  }
+
+  const promptConfig = [];
+  for (let index = 0; index < baseConfig.length; index++) {
+    baseConfig[index] = baseConfig[index] || {};
+    extraConfig[index] = extraConfig[index] || {};
+    promptConfig.push({
+      type: baseConfig[index].type,
+      name: baseConfig[index].name,
+      message: extraConfig[index].message || baseConfig[index].message,
+      validate: extraConfig[index].validate || baseConfig[index].validate,
+      default: extraConfig[index].default,
+      choices: extraConfig[index].choices,
+    });
+  }
+  return inquirer.prompt(promptConfig);
 }
 
 module.exports = {
-  FileType,
-  fileTypePrompt,
-  oasPathPrompt,
-  testSuitePathPrompt,
-  apiEndpointPrompt,
-  usernamePrompt,
-  passwordPrompt,
-  apiKeyPrompt,
-  upsertConfigPrompt,
-  configDetailsPrompt,
+  prompt,
+  BaseConfig,
 };

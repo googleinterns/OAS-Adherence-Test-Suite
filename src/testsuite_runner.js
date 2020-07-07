@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/** @module testrunner */
+/** @module testsuite_runner */
 /**
  * @fileoverview contains functions that runs testsuite and display test summary
  */
@@ -25,6 +25,7 @@ const {logger} = require('./log');
 const {performance} = require('perf_hooks');
 const equals = require('is-equal-shallow');
 const {fork} = require('child_process');
+const {displayTestResults} = require('./testcase_runner');
 
 const testVerdictCounter = {
   pass: 0,
@@ -83,6 +84,10 @@ async function runTestSuite() {
 
   const startTime = performance.now();
 
+  /*
+    activeChildProcesses - number of child processes that will be created and
+    be in active state.
+  */
   let activeChildProcesses = 0;
   for (const apiTestSuite of apiTestSuites) {
     const {apiEndpoint} = apiTestSuite;
@@ -94,10 +99,7 @@ async function runTestSuite() {
     activeChildProcesses += (toBeTested)? 1 : 0;
   }
 
-  activeChildProcesses = 2;
-  // (const apiTestSuite of apiTestSuites)
-  for (let index = 0; index < 2; index++) {
-    const apiTestSuite = apiTestSuites[0];
+  for (const apiTestSuite of apiTestSuites) {
     const {apiEndpoint} = apiTestSuite;
 
     // Check if the apiEndpoint is being asked to test by the user.
@@ -116,8 +118,12 @@ async function runTestSuite() {
       oasDoc: testSuite.oasDoc,
     });
     childProcess.on('message', function(message) {
-      testVerdictCounter.pass += message.pass;
-      testVerdictCounter.fail += message.fail;
+      const {apiEndpoint, testResults} = message;
+
+      logger.info('\nTest Results for  '.grey.bold +
+        `${apiEndpoint.httpMethod}  ${baseURL}${apiEndpoint.path}`.cyan);
+      displayTestResults(testResults, testVerdictCounter);
+
       activeChildProcesses--;
       if (activeChildProcesses) return;
 

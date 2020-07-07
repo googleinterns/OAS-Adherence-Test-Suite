@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-// Add file overview
+/** @module testcase_runner */
+/**
+ * @fileoverview contains functions that runs testcases for a particular
+ * api-endpoint, build test-results, display test-results.
+ */
 
 // eslint-disable-next-line no-unused-vars
 const colors = require('colors');
@@ -37,25 +41,13 @@ axiosRetry(axios, {retries: 3, retryCondition: function(err) {
   return (err.code === 'ECONNABORTED');
 }});
 
-const testVerdictCounter = {
-  pass: 0,
-  fail: 0,
-};
-
-/**
- * resets the testverdict counter
- */
-function resetTestVerdictCounter() {
-  testVerdictCounter.pass = 0;
-  testVerdictCounter.fail = 0;
-}
-
 /**
  * displays test results of each test case with test verdicts, test case
  * details and other details like errors if any.
- * @param {object} testResults
+ * @param {array<object>} testResults
+ * @param {object} testVerdictCounter
  */
-function displayTestResults(testResults) {
+function displayTestResults(testResults, testVerdictCounter) {
   testResults.forEach(function(testResult) {
     const {
       testCase,
@@ -109,12 +101,13 @@ function displayTestResults(testResults) {
 }
 
 /**
- *
- * @param {*} testCases
- * @param {*} responses
- * @param {*} expectedStatusCodes
- * @param {*} responseSchemas
- * @return {object}
+ * Builds test-results which includes details like testVerdicts, errors if any
+ * from testcases and their corresponding responses.
+ * @param {array<object>} testCases
+ * @param {array<object>} responses
+ * @param {array<string>} expectedStatusCodes
+ * @param {object} responseSchemas
+ * @return {array<object>}
  */
 function buildTestResults(testCases, responses, expectedStatusCodes,
     responseSchemas) {
@@ -275,14 +268,16 @@ async function runTestCase(testCases, expectedStatusCodes,
   return testResults;
 }
 
+/*
+  The 'message' event is triggered when a child process uses process.send()
+  to send messages.
+*/
 process.on('message', async function(message) {
-  const {baseURL, basicAuth, apiKeys, timeout, apiTestSuite, oasDoc}= message;
+  const {baseURL, basicAuth, apiKeys, timeout, apiTestSuite, oasDoc} = message;
   const {apiEndpoint} = apiTestSuite;
   const axiosConfig = {baseURL, basicAuth, apiKeys, timeout};
 
-  resetTestVerdictCounter();
   let testResults = [];
-
   const positiveTestCases = apiTestSuite.testCases.positiveTestCases;
   testResults = testResults.concat(await runTestCase(positiveTestCases,
       ['2xx'], apiTestSuite, oasDoc, axiosConfig));
@@ -291,11 +286,21 @@ process.on('message', async function(message) {
   testResults = testResults.concat(await runTestCase(negativeTestCases,
       ['4xx', '5xx'], apiTestSuite, oasDoc, axiosConfig));
 
-  logger.info('\nTest Results for  '.grey.bold +
-    `${apiEndpoint.httpMethod}  ${baseURL}${apiEndpoint.path}`.cyan);
-
-  displayTestResults(testResults);
-
-  process.send(testVerdictCounter);
+  /* Sends the computed results to parent process.*/
+  process.send({
+    apiEndpoint,
+    testResults,
+  });
+  /*
+    node.js provides the option to have a back and forth communication between
+    child processes and  parent/main process and hence doesn't automatically
+    terminate the child process on its own.
+    Once the computed results are sent back to the parent process, we terminate
+    the child process as there is no need for back and forth communication.
+  */
   process.exit();
 });
+
+module.exports = {
+  displayTestResults,
+};

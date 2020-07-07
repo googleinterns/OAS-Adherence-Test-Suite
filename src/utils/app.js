@@ -21,6 +21,8 @@
  * the whole app.
  */
 
+const fs = require('fs');
+
 /**
  * Generates and returns a random number(integer/float) within the limits set.
  * @param {(number|undefined)} low Minimum Limit
@@ -68,8 +70,35 @@ function snakeCase(sentence) {
   return result;
 }
 
+/**
+ * Checks whether the file in the provided path is a valid JSON file.
+ * @param {string} path path of JSON file
+ * @return {boolean}
+ */
+function isValidJSONFile(path) {
+  try {
+    const jsonObject = fs.readFileSync(path, 'utf8');
+    JSON.parse(jsonObject);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
+ * Returns parsed JSON data present in the the path provided.
+ * @param {string} path path of JSON file
+ * @return {object}
+ */
+function getJSONData(path) {
+  const jsonObject = fs.readFileSync(path, 'utf8');
+  return JSON.parse(jsonObject);
+}
+
 module.exports = {
   getRandomNumber,
   getRandomString,
   snakeCase,
+  isValidJSONFile,
+  getJSONData,
 };

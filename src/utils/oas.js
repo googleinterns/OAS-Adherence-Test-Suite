@@ -56,7 +56,6 @@ async function parseOASDoc(oasDoc) {
     logger.verbose('\nOAS 3.0 Document parsed successfully\n'.magenta);
     return parsedOASDoc;
   } catch (err) {
-    console.log(err);
     logger.error('OAS 3.0 Document Parse Failed!! '.red);
     return null;
   }

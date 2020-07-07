@@ -21,6 +21,7 @@
 
 const fs = require('fs');
 const {logger} = require('../log');
+const {isValidJSONFile, getJSONData} = require('../utils/app');
 
 /**
  * builds a config object with provided information.
@@ -51,13 +52,10 @@ function buildConfig(testSuitePath, baseURL, apiEndpoints, apiKeys,
  * @return {object} config
  */
 function getConfig(configPath) {
-  let config;
-  try {
-    config = fs.readFileSync(configPath, 'utf8');
-    config = JSON.parse(config);
-    return config;
-  } catch (err) {
-    logger.error(`failed to upload config file from ${configPath}`.red);
+  if (isValidJSONFile(configPath)) {
+    return getJSONData(configPath);
+  } else {
+    logger.error(`Failed to upload config file from ${configPath}`.red);
     return null;
   }
 }
@@ -73,7 +71,7 @@ function upsertConfig(config, configPath) {
     fs.writeFileSync(configPath, JSON.stringify(config), 'utf8');
     logger.verbose(
         `\nconfig file updated/created at (${configPath})\n`.magenta);
-  } catch (error) {
+  } catch (err) {
     logger.error('\nconfig file update/create failed\n'.red);
   }
 }

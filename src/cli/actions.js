@@ -21,7 +21,6 @@
 
 // eslint-disable-next-line no-unused-vars
 const colors = require('colors');
-const fs = require('fs');
 const {logger} = require('../log');
 const {loadTestParameters} = require('../testparameters');
 const {parseOASDoc} = require('../utils/oas');
@@ -31,7 +30,8 @@ const {
 } = require('../generators/test_data');
 const {runTestSuite} = require('../testsuite_runner');
 const {buildConfig, getConfig, upsertConfig} = require('../utils/config');
-const {oasPathPrompt, testSuitePathPrompt} = require('./prompts');
+const {isValidJSONFile, getJSONData} = require('../utils/app');
+const {BaseConfig, prompt} = require('./prompts');
 
 /**
  * generates testsuite and creates a testSuite file in the path specified
@@ -50,14 +50,13 @@ async function generateTestSuite(options) {
   let oasDoc;
   let oasPath = options.oaspath;
   if (oasPath == null) {
-    const response = await oasPathPrompt();
+    const response = await prompt(BaseConfig.oasPath);
     oasPath = response.oasPath;
   }
   try {
-    oasDoc = fs.readFileSync(oasPath, 'utf8');
-    oasDoc = JSON.parse(oasDoc);
-    logger.verbose('oas document uploaded successfully.\n'.magenta);
+    oasDoc = getJSONData(oasPath);
     oasDoc = await parseOASDoc(oasDoc);
+    logger.verbose('oas document uploaded and parsed successfully.\n'.magenta);
   } catch (err) {
     logger.error('oas document upload/parse failed.'.red);
     return;
@@ -70,7 +69,16 @@ async function generateTestSuite(options) {
 
   let testSuitePath = options.testsuitepath;
   if (testSuitePath == null) {
-    const response = await testSuitePathPrompt();
+    const response = await prompt(BaseConfig.testSuitePath, {
+      validate: function(path) {
+        /*
+          Since, we provide error logs to users if something goes wrong during
+          the creation of testsuite file. Skip validation at the time of
+          creating a testsuite file.
+        */
+        return true;
+      },
+    });
     testSuitePath = response.testSuitePath;
   }
   createTestSuiteFile(oasDoc, testSuitePath);
@@ -93,11 +101,10 @@ async function validateApiEndpoints(options) {
   const testSuitePath = options.testsuitepath;
   let testSuite;
   if (testSuitePath) {
-    try {
-      testSuite = fs.readFileSync(testSuitePath, 'utf8');
-      testSuite = JSON.parse(testSuite);
+    if (isValidJSONFile(testSuitePath)) {
+      testSuite = getJSONData(testSuitePath);
       logger.verbose('testsuite uploaded successfully.\n'.magenta);
-    } catch (err) {
+    } else {
       logger.error('testsuite Upload Failed.'.red);
       return;
     }
@@ -105,13 +112,12 @@ async function validateApiEndpoints(options) {
 
   const oasPath = options.oaspath;
   if (oasPath) {
-    try {
-      let oasDoc = fs.readFileSync(oasPath, 'utf8');
-      oasDoc = JSON.parse(oasDoc);
+    if (isValidJSONFile(oasPath)) {
+      const oasDoc = getJSONData(oasPath);
       logger.verbose('oas 3.0 document uploaded successfully.\n'.magenta);
       testSuite = buildTestSuite(oasDoc);
       logger.verbose('testsuite created successfully.\n'.magenta);
-    } catch (err) {
+    } else {
       logger.error('oas 3.0 document upload Failed.'.red);
       return;
     }
