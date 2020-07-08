@@ -23,10 +23,11 @@
 
 const {logger} = require('./log');
 const {snakeCase} = require('./utils/app');
-const _ = require('lodash');
+const lodash = require('lodash');
+const os = require('os');
 const {BaseConfig, prompt} = require('./cli/prompts');
 const {upsertConfig} = require('./utils/config');
-const {getApiEndpoints, parseOASDoc} =require('./utils/oas');
+const {getApiEndpoints, parseOASDoc} = require('./utils/oas');
 const {isValidJSONFile, getJSONData} = require('./utils/app');
 const {buildTestSuite} = require('./generators/test_data');
 const {getApiKeyList, isBasicAuthRequired} = require('./auth');
@@ -47,6 +48,8 @@ const FileType = {
  * When a particular test parameter is present in both command option and
  * config file. The value passed through the command option is loaded.
  * When a necessary test paramter is missing, we prompt the user to provide it.
+ * All the arguments of this function are the values provided as command
+ * options by the user.
  * @param {object} testSuite testsuite object
  * @param {string} baseURL baseURL of the api endpoints
  * @param {Array< {httpMethod: String, path: String} >} apiEndpoints
@@ -58,91 +61,86 @@ const FileType = {
 async function loadTestParameters(testSuite, baseURL, apiEndpoints,
     apiKeys = [], basicAuth, timeout, config = {}) {
   /*
-    extraConfig contains extra configs/credentials that are prompted and
-    received from the user as they are necessary for the execution of testsuite.
+    newConfigs contains configs/credentials that are prompted and received from
+    the user as they are necessary for the execution of testsuite.
     At the end, we provide user, the option to update/create the config file
-    with extraConfig.
+    with newConfigs.
   */
-  const extraConfig = {};
-  let oasDoc;
-  if (testSuite == null) {
-    if (config.testSuitePath) {
-      if (isValidJSONFile(config.testSuitePath)) {
-        testSuite = getJSONData(config.testSuitePath);
+  const newConfigs = {};
+  const testParams = {};
+
+  if (config.testSuitePath && isValidJSONFile(config.testSuitePath)) {
+    testParams.testSuite = getJSONData(config.testSuitePath);
+    logger.verbose('TestSuite uploaded successfully from config'.magenta);
+  }
+  testParams.testSuite = testSuite || testParams.testSuite;
+
+  if (!testParams.testSuite) {
+    const choices = [FileType.OAS_DOC, FileType.TESTSUITE_FILE];
+    const response = await prompt([BaseConfig.fileType], [{choices}]);
+    switch (response.fileType) {
+      case FileType.OAS_DOC: {
+        const response = await prompt([BaseConfig.oasPath]);
+        let oasDoc = getJSONData(response.oasPath);
+        oasDoc = await parseOASDoc(oasDoc);
+        if (!oasDoc) {
+          const errorObject = {
+            'Error Type': 'oas doc parse fail',
+            'Error Message': 'invalid oas 3.0 document',
+          };
+          throw errorObject;
+        }
+        testParams.testSuite = buildTestSuite(oasDoc);
+        const defualtTestSuitePath = os.homedir() +
+            snakeCase(`/testsuite ${new Date().toDateString()}`);
+        /*
+          Since both cli/actions.js and testparamters.js includes each other
+          through require(), they eventually fall in an infinite loop.
+          To avoid running into an infinte loop, we require the module only when
+          required.
+        */
+        const {generateTestSuite} = require('./cli/actions');
+        await generateTestSuite({
+          oaspath: response.oasPath,
+          testsuitepath: defualtTestSuitePath,
+        });
+        newConfigs.testSuitePath = defualtTestSuitePath;
+        break;
+      }
+      case FileType.TESTSUITE_FILE: {
+        const response = await prompt([BaseConfig.testSuitePath]);
+        testParams.testSuite = getJSONData(response.testSuitePath);
         logger.verbose('testSuite uploaded successfully.'.magenta);
-        oasDoc = testSuite.oasDoc;
-      } else {
-        logger.error('testSuite upload failed.'.red +
-          '(check path of testsuite in the config file)'.red);
-        return;
+        newConfigs.testSuitePath = response.testSuitePath;
+        break;
       }
-    } else {
-      const choices = [FileType.OAS_DOC, FileType.TESTSUITE_FILE];
-      const response = await prompt(BaseConfig.fileType, {choices});
-      switch (response.fileType) {
-        case FileType.OAS_DOC: {
-          const response = await prompt(BaseConfig.oasPath);
-          oasDoc = getJSONData(response.oasPath);
-          oasDoc = await parseOASDoc(oasDoc);
-          if (oasDoc == null) {
-            const errorObject = {
-              'Error Type': 'oas doc parse fail',
-              'Error Message': 'invalid oas 3.0 document',
-            };
-            throw errorObject;
-          }
-          testSuite = buildTestSuite(oasDoc);
-          break;
-        }
-        case FileType.TESTSUITE_FILE: {
-          const response = await prompt(BaseConfig.testSuitePath);
-          testSuite = getJSONData(response.testSuitePath);
-          logger.verbose('testSuite uploaded successfully.'.magenta);
-          oasDoc = testSuite.oasDoc;
-          extraConfig.testSuitePath = response.testSuitePath;
-          break;
-        }
-      }
-    }
-  } else {
-    oasDoc = testSuite.oasDoc;
-  }
-
-  const title = oasDoc.info.title;
-  const version = oasDoc.openapi;
-  logger.info('\nTestSuite Details:');
-  logger.info('Created At: '.grey.bold +
-    `${testSuite.createdAtTimeStamp}`.cyan);
-  logger.info('Title: '.grey.bold + `${title}`.cyan);
-  logger.info(`Version: `.grey.bold + `${version}\n`.cyan);
-
-  if (baseURL == null) {
-    if (config.baseURL) baseURL = config.baseURL;
-    else {
-      /*
-        If the user has not provided the baseURL through command option or
-        config file, fetch the baseURL from the oas doc.
-        If multiple baseURLs are present in the oas doc, pick the first one.
-      */
-      baseURL = oasDoc.servers[0].url;
     }
   }
 
-  if (apiEndpoints == null) {
-    if (config.apiEndpoints) apiEndpoints = config.apiEndpoints;
-    else {
-      const allApiEndpoints = getApiEndpoints(oasDoc);
-      const allApiEndpointsString = allApiEndpoints.map(function(apiEndpoint) {
-        return JSON.stringify(apiEndpoint);
-      });
-      const response = await prompt(BaseConfig.apiEndpoints,
-          {choices: allApiEndpointsString});
-      const apiEndpointsString = response.apiEndpoints;
-      apiEndpoints = apiEndpointsString.map(function(apiEndpoint) {
+  const oasDoc = testParams.testSuite.oasDoc;
+  displayTestSuiteDetails(testParams.testSuite);
+
+  /*
+    If the user has not provided the baseURL through command option or
+    config file, fetch the baseURL from the oas doc.
+    If multiple baseURLs are present in the oas doc, pick the first one.
+  */
+  testParams.baseURL = baseURL || config.baseURL || oasDoc.servers[0].url;
+
+  testParams.apiEndpointsToTest = apiEndpoints || config.apiEndpoints;
+  if (!testParams.apiEndpointsToTest) {
+    const allApiEndpoints = getApiEndpoints(oasDoc);
+    const allApiEndpointsString = allApiEndpoints.map(function(apiEndpoint) {
+      return JSON.stringify(apiEndpoint);
+    });
+    const response = await prompt([BaseConfig.apiEndpoints],
+        [{choices: allApiEndpointsString}]);
+    const apiEndpointsString = response.apiEndpoints;
+    testParams.apiEndpointsToTest =
+      apiEndpointsString.map(function(apiEndpoint) {
         return JSON.parse(apiEndpoint);
       });
-      extraConfig.apiEndpoints = apiEndpoints;
-    }
+    newConfigs.apiEndpoints = testParams.apiEndpointsToTest;
   }
 
   const apiKeysObject = {};
@@ -157,22 +155,23 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
     */
     if (!apiKeysObject[apiKey.name]) apiKeysObject[apiKey.name] = apiKey.value;
   });
-  const requiredApiKeys = getApiKeyList(apiEndpoints, oasDoc);
+  const requiredApiKeys = getApiKeyList(testParams.apiEndpointsToTest, oasDoc);
   for (const requiredApiKeyName of requiredApiKeys) {
-    const response = await prompt(BaseConfig.apiKey,
-        {message: `[API Key] ${requiredApiKeyName}`});
+    const response = await prompt([BaseConfig.apiKey],
+        [{message: `[API Key] ${requiredApiKeyName}`}]);
     apiKeysObject[requiredApiKeyName] = response.apiKeyValue;
-    extraConfig.apiKeys = extraConfig.apiKeys || [];
-    extraConfig.apiKeys.push({
+    newConfigs.apiKeys = newConfigs.apiKeys || [];
+    newConfigs.apiKeys.push({
       name: requiredApiKeyName,
       value: response.apiKeyValue,
     });
   }
+  testParams.apiKeys = apiKeysObject;
 
-  if (isBasicAuthRequired(apiEndpoints, oasDoc) && basicAuth == null) {
-    if (config.basicAuth) basicAuth = config.basicAuth;
-    else {
-      const response = await prompt(BaseConfig.username);
+  if (isBasicAuthRequired(testParams.apiEndpointsToTest, oasDoc)) {
+    testParams.basicAuth = basicAuth || config.basicAuth;
+    if (!testParams.basicAuth) {
+      const response = await prompt([BaseConfig.username]);
       basicAuth = {};
       basicAuth.username = response.username;
       // eslint-disable-next-line no-constant-condition
@@ -185,48 +184,65 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
           break;
         }
       }
-      extraConfig.basicAuth = basicAuth;
+      testParams.basicAuth = basicAuth;
+      newConfigs.basicAuth = basicAuth;
     }
   }
 
-  if (timeout == null && config.timeout) {
-    timeout = config.timeout;
+  testParams.timeout = timeout || config.timeout;
+
+  if (!lodash.isEmpty(newConfigs)) {
+    await addConfigs(newConfigs, config);
   }
 
-  if (!_.isEmpty(extraConfig)) {
-    const response = await prompt(BaseConfig.upsertConfig);
-    if (response.upsertConfig == true) {
-      const keys = Object.keys(extraConfig);
-      keys.forEach(function(key) {
-        if (key == 'apiKeys') {
-          /*
-            In order to persist the exisiting API keys present in config file ,
-            we concat the new API keys to it.
-          */
-          config[key] = config[key] || [];
-          config[key] = config[key].concat(extraConfig[key]);
-          return;
-        }
-        config[key] = extraConfig[key];
-      });
-
-      const defualtConfigFilePath = require('os').homedir() +
-        snakeCase(`config ${new Date().toDateString()}`);
-      const response = await prompt(BaseConfig.configFilePath,
-          {default: defualtConfigFilePath});
-      upsertConfig(config, response.configFilePath);
-    }
-  }
-
-  module.exports.testParams = {
-    baseURL,
-    apiEndpointsToTest: apiEndpoints,
-    testSuite,
-    basicAuth,
-    apiKeys: apiKeysObject,
-    timeout,
-  };
+  module.exports.testParams = testParams;
   logger.verbose('\nExported test params successfully.');
+}
+
+/**
+ * Adds newConfig attributes by updating/creating the config file.
+ * @param {object} newConfigs newConfigs contains configs/credentials that are
+ *    prompted and received from the user.
+ * @param {object} config
+ */
+async function addConfigs(newConfigs, config) {
+  const response = await prompt([BaseConfig.upsertConfig]);
+  if (response.upsertConfig) {
+    const keys = Object.keys(newConfigs);
+    keys.forEach(function(key) {
+      if (key === 'apiKeys') {
+        /*
+          In order to persist the exisiting API keys present in config file ,
+          we concat the new API keys to it.
+        */
+        config[key] = config[key] || [];
+        config[key] = config[key].concat(newConfigs[key]);
+        return;
+      }
+      config[key] = newConfigs[key];
+    });
+
+    const defualtConfigFilePath = os.homedir() +
+      snakeCase(`/config ${new Date().toDateString()}`);
+    const response = await prompt([BaseConfig.configFilePath],
+        [{default: defualtConfigFilePath}]);
+    upsertConfig(config, response.configFilePath);
+  }
+}
+
+/**
+ * Displays basic info of a TestSuite.
+ * @param {object} testSuite TestSuite Document.
+ */
+function displayTestSuiteDetails(testSuite) {
+  const oasDoc = testSuite.oasDoc;
+  const title = oasDoc.info.title;
+  const version = oasDoc.openapi;
+  logger.info('\nTestSuite Details:');
+  logger.info('Created At: '.grey.bold +
+    `${testSuite.createdAtTimeStamp}`.cyan);
+  logger.info('Title: '.grey.bold + `${title}`.cyan);
+  logger.info(`Version: `.grey.bold + `${version}\n`.cyan);
 }
 
 module.exports = {

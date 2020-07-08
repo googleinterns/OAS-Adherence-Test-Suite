@@ -22,7 +22,7 @@
  */
 
 const fs = require('fs');
-const _ = require('lodash');
+const lodash = require('lodash');
 const {getApiEndpoints} = require('../utils/oas');
 const {logger} = require('../log');
 const {DataType} = require('../constants');
@@ -55,7 +55,7 @@ function getPostitveTestCaseForRequestBody(schema, extras = {}) {
   deficientDatas.forEach(function(deficientData) {
     // To send an api request, the requestbody should be of object datatype.
     if (typeof(deficientData.data) !== DataType.OBJECT) return;
-    const testCase = _.merge(deficientData, extras);
+    const testCase = lodash.merge(deficientData, extras);
     testCases.push(testCase);
   });
   return testCases;
@@ -88,7 +88,7 @@ function getNegativeTestCaseForRequestBody(schema, extras = {}) {
   deficientDatas.forEach(function(deficientData) {
     // To send an api request, the requestbody should be of object datatype.
     if (typeof(deficientData.data) !== DataType.OBJECT) return;
-    const testCase = _.merge(deficientData, extras);
+    const testCase = lodash.merge(deficientData, extras);
     testCases.push(testCase);
   });
   return testCases;
@@ -154,7 +154,7 @@ function getPostitveTestCaseForRequestHeader(parameters, extras = {}) {
 
   const testCases = [];
   deficientDatasOfAllHeaders.forEach(function(deficientData) {
-    const testCase = _.merge(deficientData, extras);
+    const testCase = lodash.merge(deficientData, extras);
     testCases.push(testCase);
   });
   return testCases;
@@ -232,7 +232,7 @@ function getNegativeTestCaseForRequestHeader(parameters, extras = {}) {
 
   const testCases = [];
   deficientDatasOfAllHeaders.forEach(function(deficientData) {
-    const testCase = _.merge(deficientData, extras);
+    const testCase = lodash.merge(deficientData, extras);
     testCases.push(testCase);
   });
   return testCases;
@@ -324,17 +324,14 @@ function buildTestSuite(oasDoc) {
 function createTestSuiteFile(oasDoc, testSuitePath) {
   let testSuite = buildTestSuite(oasDoc);
   testSuite = JSON.stringify(testSuite);
-
-  // [DEV] Validate whether the file present in testSuitePath is a json file.
-  fs.writeFile(testSuitePath, testSuite, function(err) {
-    if (err) {
-      logger.error('\nFailure in saving the testsuite file generated in'.red +
-        `${testSuitePath}`.red);
-      return;
-    }
+  try {
+    fs.writeFileSync(testSuitePath, testSuite);
     logger.info('\nTestSuite created and saved successfully at '.magenta +
         `${testSuitePath}`.magenta);
-  });
+  } catch (err) {
+    logger.error('\nFailure in saving the testsuite file generated in'.red +
+        `${testSuitePath}`.red);
+  }
 }
 
 module.exports = {

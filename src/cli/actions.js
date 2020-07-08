@@ -38,7 +38,7 @@ const {BaseConfig, prompt} = require('./prompts');
  * by the user.
  * @param {object} options options of the command 'generate'
  */
-async function generateTestSuite(options) {
+async function generateTestSuite(options = {}) {
   if (options.verbose) {
     /*
       overwrite the level of logger object to 'verbose'.
@@ -47,12 +47,13 @@ async function generateTestSuite(options) {
     logger.level = 'verbose';
   }
 
-  let oasDoc;
   let oasPath = options.oaspath;
-  if (oasPath == null) {
-    const response = await prompt(BaseConfig.oasPath);
+  if (!oasPath) {
+    const response = await prompt([BaseConfig.oasPath]);
     oasPath = response.oasPath;
   }
+
+  let oasDoc;
   try {
     oasDoc = getJSONData(oasPath);
     oasDoc = await parseOASDoc(oasDoc);
@@ -64,22 +65,14 @@ async function generateTestSuite(options) {
 
   const title = oasDoc.info.title;
   const version = oasDoc.openapi;
-  logger.info('Title: '.grey.bold + `${title}`.cyan);
-  logger.info(`Version: `.grey.bold + `${version}`.cyan);
+  logger.verbose('Title: '.grey.bold + `${title}`.cyan);
+  logger.verbose(`Version: `.grey.bold + `${version}`.cyan);
 
   let testSuitePath = options.testsuitepath;
-  if (testSuitePath == null) {
-    const response = await prompt(BaseConfig.testSuitePath, {
-      validate: function(path) {
-        /*
-          Since, we provide error logs to users if something goes wrong during
-          the creation of testsuite file. Skip validation at the time of
-          creating a testsuite file.
-        */
-        return true;
-      },
-    });
-    testSuitePath = response.testSuitePath;
+  if (!testSuitePath) {
+    const response = await prompt([BaseConfig.path],
+        [{message: 'TestSuite Path'}]);
+    testSuitePath = response.path;
   }
   createTestSuiteFile(oasDoc, testSuitePath);
 }
@@ -89,7 +82,7 @@ async function generateTestSuite(options) {
  * triggering the testrunner.
  * @param {object} options options of the command 'validate'
  */
-async function validateApiEndpoints(options) {
+async function validateApiEndpoints(options = {}) {
   if (options.verbose) {
     /*
       overwrite the level of logger object to 'verbose'.
@@ -174,6 +167,7 @@ async function validateApiEndpoints(options) {
         basicAuth, timeout, config);
   } catch (err) {
     logger.error(JSON.stringify(err).red);
+    logger.error('Failed loading test parameters.');
     return;
   }
   runTestSuite();

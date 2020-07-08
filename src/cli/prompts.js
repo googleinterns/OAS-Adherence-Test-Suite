@@ -48,6 +48,10 @@ const BaseConfig = {
         'Please enter a valid path for testsuite file';
     },
   },
+  path: {
+    type: 'input',
+    name: 'path',
+  },
   fileType: {
     type: 'list',
     name: 'fileType',
@@ -95,43 +99,31 @@ const BaseConfig = {
  * Prompts the users with differnt types of questions.
  * Types of Questions: confirm(Y/n), to provide input, to select from a
  * list/checkbox etc..
- * Similar to inquirer.prompt(), our custom prompt function takes a set of
- * questions as an array argument or a single question as an object argument.
- * @param {object | array<object>} baseConfig Contains properties which have
- *      static values and constitute to the promptConfig. Example: 'type'
- * @param {object | array<object>} extraConfig Contains properties which have
- *      dynamic values and constitute to the promptConfig. Example: 'choices'
+ * @param {array<object>} staticConfigs Contains properties which have
+ *    static values or reserved values. Example: {'type': 'confirm'}
+ * @param {array<object>} dynamicConfigs Contains properties whose values are
+ *    not static and changes as per the requirements or the associated usecase.
+ *    Example: {'choices': ['Bread', 'Burger']}
  * @return {promise}
  */
-function prompt(baseConfig, extraConfig = {}) {
-  /*
-    prompt can take an array of baseConfigs, extraConfigs which corresponds to
-    a set of questions rather than a single question.
-    In order to avoid writing concrete code for handling each and every case,
-    we cast the object into an array.
-  */
-  if (!Array.isArray(baseConfig)) {
-    baseConfig = [baseConfig];
-    extraConfig = [extraConfig];
-  }
-
-  const promptConfig = [];
-  for (let index = 0; index < baseConfig.length; index++) {
-    baseConfig[index] = baseConfig[index] || {};
-    extraConfig[index] = extraConfig[index] || {};
-    promptConfig.push({
-      type: baseConfig[index].type,
-      name: baseConfig[index].name,
-      message: extraConfig[index].message || baseConfig[index].message,
-      validate: extraConfig[index].validate || baseConfig[index].validate,
-      default: extraConfig[index].default,
-      choices: extraConfig[index].choices,
+function prompt(staticConfigs, dynamicConfigs) {
+  dynamicConfigs = dynamicConfigs || [];
+  const promptConfigs = [];
+  staticConfigs.forEach(function(staticConfig, index) {
+    const dynamicConfig = dynamicConfigs[index] || {};
+    promptConfigs.push({
+      type: staticConfig.type,
+      name: staticConfig.name,
+      message: dynamicConfig.message || staticConfig.message,
+      validate: dynamicConfig.validate || staticConfig.validate,
+      default: dynamicConfig.default,
+      choices: dynamicConfig.choices,
     });
-  }
-  return inquirer.prompt(promptConfig);
+  });
+  return inquirer.prompt(promptConfigs);
 }
 
 module.exports = {
-  prompt,
   BaseConfig,
+  prompt,
 };
