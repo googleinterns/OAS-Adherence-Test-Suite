@@ -37,18 +37,28 @@ user experience.
 > #### Note: App can serve the users through interative cli as well. Users will be asked/prompted for necessary data if not provided through command options. Also, users can just type    ```ats <command>``` to start a complete interactive cli flow. 
 
 ### Generate testsuite 
-> Generates testsuite containing testcases for all the api endpoints present in the OAS 3.0 document.
+Generates testsuite containing testcases for all the api endpoints present in the OAS 3.0 document.
+
 ```bash
 ats generate [--oaspath <oaspath>] [--testsuitepath <testsuitepath>] [--verbose]
 ```
+
 #### Options
 * ```--oaspath <oaspath>```: Path of OAS 3.0 document.
+
+    Example:
+    ```bash
+    --oaspath = "/foldername/petstore.json" 
+    ```
+    
 * ```--testsuitepath <testsuitepath>```: Path where the generated testsuite is saved.
+
+    Example:
+    ```bash
+    --testsuitepath = "/foldername/petstore_1.0.5_testsuite.json"
+    ```
+
 * ```--verbose```: Provides more information about events that occur through logs.
-#### Examples
-* ``` --oaspath = "/foldername/petstore.json" ```
-* ``` --testsuitepath = "/foldername/petstore_1.0.5_testsuite.json" ```
-* ``` --verbose ```
 
 ### Validate API Endpoints
 > Validates the API Endpoints against the OpenAPI Specification.
