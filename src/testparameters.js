@@ -153,7 +153,9 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
       Fetch the value of API key from config file, only if
       it is not provided by the user through command options.
     */
-    if (!apiKeysObject[apiKey.name]) apiKeysObject[apiKey.name] = apiKey.value;
+    if (!apiKeysObject[apiKey.name]) {
+      apiKeysObject[apiKey.name] = apiKey.value;
+    }
   });
   const requiredApiKeys = getApiKeyList(testParams.apiEndpointsToTest, oasDoc);
   for (const requiredApiKeyName of requiredApiKeys) {
