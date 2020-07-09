@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-/** @module apiutils */
+/** @module utils/oas */
 /**
- * @fileoverview Contains util functions for api endpoints.
+ * @fileoverview contains util functions scoped to oas.
  */
+
+const {logger} = require('../log');
+// eslint-disable-next-line no-unused-vars
+const colors = require('colors');
+const SwaggerParser = require('@apidevtools/swagger-parser');
 
 /**
  * Returns an array of all possible api Endpoints.
  * @param {object} oasDoc OAS 3.0 Document.
- * @return {Array<{path: string, httpMethod: string}>} apiEndpoints
+ * @return {array<{path: string, httpMethod: string}>} apiEndpoints
  */
 function getApiEndpoints(oasDoc) {
   const apiEndpoints = [];
@@ -39,6 +44,24 @@ function getApiEndpoints(oasDoc) {
   return apiEndpoints;
 }
 
+/**
+ * Validates the OAS 3.0 document and resolves all the $ref pointers and
+ * returns a de-referenced OAS 3.0 Documentation.
+ * @param {object} oasDoc OAS 3.0 Document.
+ * @return {object} parsed OAS 3.0 Document.
+ */
+async function parseOASDoc(oasDoc) {
+  try {
+    const parsedOASDoc = await SwaggerParser.validate(oasDoc);
+    logger.verbose('\nOAS 3.0 Document parsed successfully\n'.magenta);
+    return parsedOASDoc;
+  } catch (err) {
+    logger.error('OAS 3.0 Document Parse Failed!! '.red);
+    return null;
+  }
+}
+
 module.exports = {
   getApiEndpoints,
+  parseOASDoc,
 };

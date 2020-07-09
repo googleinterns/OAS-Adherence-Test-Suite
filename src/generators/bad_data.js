@@ -20,8 +20,8 @@
  * in data type/enum/number limit/optional key/required key/string length.
  */
 
-const {getMockData} = require('./adequate_datagen');
-const {getRandomString} = require('../utils');
+const {getMockData} = require('./good_data');
+const {getRandomString} = require('../utils/app');
 const {DataType} = require('../constants');
 
 const DUMMY = [{
@@ -54,12 +54,12 @@ const DUMMY = [{
 function getDataDeficientByDataType(schema, identifier='$') {
   if (!schema) return [];
 
-  const deficientData = [];
+  let deficientData = [];
 
   if (schema.oneOf) {
     const schemas = schema.oneOf;
     schemas.forEach(function(schema) {
-      deficientData.concat(
+      deficientData = deficientData.concat(
           getDataDeficientByDataType(schema, identifier));
     });
     return deficientData;
@@ -105,6 +105,16 @@ function getDataDeficientByDataType(schema, identifier='$') {
     */
     if (dummy.type === DataType.INTEGER &&
       schema.type === DataType.NUMBER) return;
+
+    /*
+      String can be a integer/decimal/boolean value, therefore we skip the
+      below case as it doesnt bring deficiency in data .
+    */
+    if ((dummy.type === DataType.INTEGER ||
+        dummy.type === DataType.NUMBER ||
+        dummy.type === DataType.BOOLEAN) &&
+        schema.type === DataType.STRING) return;
+
     deficientData.push({
       key: identifier,
       data: dummy.data,
@@ -126,11 +136,11 @@ function getDataDeficientByEnum(schema, identifier='$') {
   if (!schema) return [];
 
   if (schema.oneOf) {
-    const deficientData = [];
+    let deficientData = [];
     const schemas = schema.oneOf;
     schemas.forEach(function(schema) {
       const childDeficientData = getDataDeficientByEnum(schema, identifier);
-      deficientData.concat(childDeficientData);
+      deficientData = deficientData.concat(childDeficientData);
     });
     return deficientData;
   }
@@ -202,12 +212,12 @@ function getDataDeficientByNumberLimit(
   if (!schema) return [];
 
   if (schema.oneOf) {
-    const deficientData = [];
+    let deficientData = [];
     const schemas = schema.oneOf;
     schemas.forEach(function(schema) {
       const childDeficientData =
         getDataDeficientByNumberLimit(schema, options, identifier);
-      deficientData.concat(childDeficientData);
+      deficientData = deficientData.concat(childDeficientData);
     });
     return deficientData;
   }
@@ -296,12 +306,12 @@ function getDataDeficientByOptionalKey(schema, identifier='$') {
   if (!schema) return [];
 
   if (schema.oneOf) {
-    const deficientData = [];
+    let deficientData = [];
     const schemas = schema.oneOf;
     schemas.forEach(function(schema) {
       const childDeficientData =
         getDataDeficientByOptionalKey(schema, identifier);
-      deficientData.concat(childDeficientData);
+      deficientData = deficientData.concat(childDeficientData);
     });
     return deficientData;
   }
@@ -363,12 +373,12 @@ function getDataDeficientByRequiredKey(schema, identifier='$') {
   if (!schema) return [];
 
   if (schema.oneOf) {
-    const deficientData = [];
+    let deficientData = [];
     const schemas = schema.oneOf;
     schemas.forEach(function(schema) {
       const childDeficientData =
         getDataDeficientByRequiredKey(schema, identifier);
-      deficientData.concat(childDeficientData);
+      deficientData = deficientData.concat(childDeficientData);
     });
     return deficientData;
   }
@@ -437,12 +447,12 @@ function getDataDeficientByStringLength(
   if (!schema) return [];
 
   if (schema.oneOf) {
-    const deficientData = [];
+    let deficientData = [];
     const schemas = schema.oneOf;
     schemas.forEach(function(schema) {
       const childDeficientData =
         getDataDeficientByStringLength(schema, options, identifier) || [];
-      deficientData.concat(childDeficientData);
+      deficientData = deficientData.concat(childDeficientData);
     });
     return deficientData;
   }

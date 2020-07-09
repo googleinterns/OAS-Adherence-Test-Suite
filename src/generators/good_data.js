@@ -27,7 +27,7 @@ const {SchemaFormat, DataType} = require('../constants');
 const {
   getRandomNumber,
   getRandomString,
-} = require('../utils');
+} = require('../utils/app');
 
 /**
  * Generates a random integer that complies with schema.

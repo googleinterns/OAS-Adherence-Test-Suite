@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-/** @module utils */
+/** @module utils/app */
 /**
- * @fileoverview Contains generic utility functions used throught the code.
+ * @fileoverview contains generic utility functions which is not scoped
+ * to a particular feature/domain. In other words, it is scoped to
+ * the whole app.
  */
+
+const fs = require('fs');
 
 /**
  * Generates and returns a random number(integer/float) within the limits set.
@@ -51,7 +55,50 @@ function getRandomString(length) {
   return result;
 }
 
+/**
+ * returns a string with lowercase string with underscores between words.
+ * @param {string} sentence
+ * @return {string} snake-cased sentence
+ */
+function snakeCase(sentence) {
+  let result = '';
+  const words = sentence.split(' ');
+  result += words.shift().toLowerCase();
+  words.forEach(function(word) {
+    result += '_' + word.toLowerCase();
+  });
+  return result;
+}
+
+/**
+ * Checks whether the file in the provided path is a valid JSON file.
+ * @param {string} path path of JSON file
+ * @return {boolean}
+ */
+function isValidJSONFile(path) {
+  try {
+    const jsonObject = fs.readFileSync(path, 'utf8');
+    JSON.parse(jsonObject);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
+ * Returns parsed JSON data present in the the path provided.
+ * @param {string} path path of JSON file
+ * @return {object}
+ */
+function getJSONData(path) {
+  const jsonObject = fs.readFileSync(path, 'utf8');
+  return JSON.parse(jsonObject);
+}
+
 module.exports = {
   getRandomNumber,
   getRandomString,
+  snakeCase,
+  isValidJSONFile,
+  getJSONData,
 };

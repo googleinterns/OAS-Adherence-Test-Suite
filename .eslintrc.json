@@ -11,7 +11,7 @@
     "plugins": [
         "vue"
     ],
-    "rules": {
-        "require-jsdoc" : 0
+    "globals": {
+        "process": false
     }
 }
