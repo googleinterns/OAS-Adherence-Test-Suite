@@ -1,0 +1,13 @@
+{
+  "/pet": {
+    "post": {
+      "requestBody": {
+        "id": 123
+      },
+      "requestHeaders": {
+	     "csrfToken": "asd",
+	     "accept": "*"
+      }
+    }
+  }
+}

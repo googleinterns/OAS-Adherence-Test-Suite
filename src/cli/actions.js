@@ -74,7 +74,20 @@ async function generateTestSuite(options = {}) {
         [{message: 'TestSuite Path'}]);
     testSuitePath = response.path;
   }
-  createTestSuiteFile(oasDoc, testSuitePath);
+
+  const overridesPath = options.overridespath;
+  let overrides = {};
+  if (overridesPath) {
+    if (isValidJSONFile(overridesPath)) {
+      overrides = getJSONData(overridesPath);
+      logger.verbose(
+          `Uploaded overrides successfully from ${overridesPath}.\n`.magenta);
+    } else {
+      logger.error('Overrides upload failed.'.red);
+      return;
+    }
+  }
+  createTestSuiteFile(oasDoc, testSuitePath, overrides);
 }
 
 /**
@@ -103,12 +116,25 @@ async function validateApiEndpoints(options = {}) {
     }
   }
 
+  const overridesPath = options.overridespath;
+  let overrides = {};
+  if (overridesPath) {
+    if (isValidJSONFile(overridesPath)) {
+      overrides = getJSONData(overridesPath);
+      logger.verbose(
+          `Uploaded overrides successfully from ${overridesPath}.\n`.magenta);
+    } else {
+      logger.error('Overrides upload failed.'.red);
+      return;
+    }
+  }
+
   const oasPath = options.oaspath;
   if (oasPath) {
     if (isValidJSONFile(oasPath)) {
       const oasDoc = getJSONData(oasPath);
       logger.verbose('oas 3.0 document uploaded successfully.\n'.magenta);
-      testSuite = buildTestSuite(oasDoc);
+      testSuite = buildTestSuite(oasDoc, overrides);
       logger.verbose('testsuite created successfully.\n'.magenta);
     } else {
       logger.error('oas 3.0 document upload Failed.'.red);

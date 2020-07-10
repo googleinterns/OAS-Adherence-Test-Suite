@@ -39,27 +39,30 @@ user experience.
 ### Generate testsuite 
 > Generates testsuite containing testcases for all the api endpoints present in the OAS 3.0 document.
 ```bash
-ats generate [--oaspath <oaspath>] [--testsuitepath <testsuitepath>] [--verbose]
+ats generate [--oaspath <oaspath>] [--testsuitepath <testsuitepath>] [--overridespath <overridespath>] [--verbose]
 ```
 #### Options
 * ```--oaspath <oaspath>```: Path of OAS 3.0 document.
 * ```--testsuitepath <testsuitepath>```: Path where the generated testsuite is saved.
+* ```--overridespath <overridespath>```: Path of Overrides file.
 * ```--verbose```: Provides more information about events that occur through logs.
 #### Examples
-* ``` --oaspath = "/foldername/petstore.json" ```
-* ``` --testsuitepath = "/foldername/petstore_1.0.5_testsuite.json" ```
-* ``` --verbose ```
+* ```--oaspath= "/foldername/petstore.json" ```
+* ```--testsuitepath= "/foldername/petstore_1.0.5_testsuite.json" ```
+* ```--overridespath= "/ats/overrides.json" ```
+* ```--verbose ```
 
 ### Validate API Endpoints
 > Validates the API Endpoints against the OpenAPI Specification.
 ```bash
-ats validate [--testsuitepath <testsuitepath>] [--oaspath <oaspath>] [--baseURL <baseURL>] [--apiendpoints <apiendpoints>]
-[--apikeys <apikeys>] [--basicauth <basicauth>] [--saveconfigto <configpath>] [--uploadconfigfrom <configpath>] 
-[--timeout <timeout>] [--verbose]
+ats validate [--testsuitepath <testsuitepath>] [--oaspath <oaspath>] [--overridespath <overridespath>]
+[--baseURL <baseURL>] [--apiendpoints <apiendpoints>] [--apikeys <apikeys>] [--basicauth <basicauth>] 
+[--saveconfigto <configpath>] [--uploadconfigfrom <configpath>] [--timeout <timeout>] [--verbose]
 ```
 #### Options
 * ```--testsuitepath <testsuitepath>```: Path of testsuite. (App runs testcases present in the testsuite)
 * ```--oaspath <oaspath>```: Path of OAS 3.0 document. (App runs testcases which are generated against the provided OAS 3.0 document)
+* ```--overridespath <overridespath>```: Path of Overrides file.
 * ```--baseURL <baseURL>```: BaseURL
 * ```--apiendpoints <apiendpoints>```: API Endpoints that needs to be validated.
 * ```--apikeys <apikeys>```: API Keys used for Authentication/Authorisation.
@@ -69,16 +72,17 @@ ats validate [--testsuitepath <testsuitepath>] [--oaspath <oaspath>] [--baseURL 
 * ```--timeout <timeout>```: Specifies the number of milliseconds before the request times out. (Default: 5000 ms)
 * ```--verbose```: Provides more descriptive test results and information about events that occur through logs.
 #### Examples
-* ``` --testsuitepath = "/foldername/petstore_1.0.5_testsuite.json" ```
-* ``` --oaspath = "/foldername/petstore.json" ```
-* ```--baseURL = "http://www.ats.com" ```
-* ```--apiendpoints = '[{"path": "/pet", "httpMethod": "post"} , {"path": "/store", "httpMethod": "post"}]'```
-* ```--apikeys = '[{"name": "X-API-KEY", "value":"foo"}, {"name": "X-API-KEY_DUP", "value": "bar"}]' ```
-* ```--basicauth = '{"username": "sundar", "password": "sundar@123"}' ```
-* ```--saveconfigto = "/foldername/petstore_config.json" ```
-* ```--uploadconfigfrom = "/foldername/petstore_config.json" ```
-* ```--timeout = 9000 ```
-* ``` --verbose ```
+* ```--testsuitepath= "/foldername/petstore_1.0.5_testsuite.json" ```
+* ```--oaspath= "/foldername/petstore.json" ```
+* ```--overridespath= "/ats/overrides.json" ```
+* ```--baseURL= "http://www.ats.com" ```
+* ```--apiendpoints= '[{"path": "/pet", "httpMethod": "post"} , {"path": "/store", "httpMethod": "post"}]'```
+* ```--apikeys= '[{"name": "X-API-KEY", "value":"foo"}, {"name": "X-API-KEY_DUP", "value": "bar"}]' ```
+* ```--basicauth= '{"username": "sundar", "password": "sundar@123"}' ```
+* ```--saveconfigto= "/foldername/petstore_config.json" ```
+* ```--uploadconfigfrom= "/foldername/petstore_config.json" ```
+* ```--timeout= 9000 ```
+* ```--verbose ```
 
 Further details on installation and basic requirement details will be added soon.
 
