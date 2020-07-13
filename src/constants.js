@@ -44,7 +44,21 @@ const DataType = {
   BOOLEAN: 'boolean',
 };
 
+const Error = {
+  DATA_TYPE: 'Data Type Mismatch Error',
+  OUT_OF_RANGE: 'Out of Range Error',
+  REQUIRED_KEY: 'Required Key Missing Error',
+  LIMITED_SUPPORT: 'Limited Support Error',
+  ENUM: 'Enum Error',
+  ONE_OF: 'OneOf Error',
+  DATA_LACK: 'Lack of Data Error',
+  FORMAT: 'String Format Error',
+  PATTERN: 'String Pattern Error',
+  OAS_DOC: 'OAS 3.0 Document Error',
+};
+
 module.exports = {
   SchemaFormat,
   DataType,
+  Error,
 };

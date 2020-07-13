@@ -14,157 +14,188 @@
  * limitations under the License.
  */
 
-/** @module datagen/deficient_datagen */
+/** @module generators/bad_data */
 /**
  * @fileoverview Contains functions which can generate data with deficiency
- * in data type/enum/number limit/optional key/required key/string length.
+ * in datatype/ enum/ number limit / optional key/ required key/ string length.
  */
 
-const {JSONPath} = require('jsonpath-plus');
 const {getMockData} = require('./good_data');
-const {getRandomString} = require('../utils/app');
+const {getRandomString, overridden} = require('../utils/app');
 const {DataType} = require('../constants');
 
-const DUMMY = [{
-  type: DataType.INTEGER,
-  data: 1,
-}, {
-  type: DataType.NUMBER,
-  data: 1.10,
-}, {
-  type: DataType.STRING,
-  data: 'ats',
-}, {
-  type: DataType.OBJECT,
-  data: {'name': 'ats'},
-}, {
-  type: DataType.ARRAY,
-  data: [1, 2, 3],
-}, {
-  type: DataType.BOOLEAN,
-  data: false,
-}];
+const DUMMY = [
+  {type: DataType.INTEGER, data: 1},
+  {type: DataType.NUMBER, data: 1.10},
+  {type: DataType.STRING, data: 'ats'},
+  {type: DataType.OBJECT, data: {'name': 'ats'}},
+  {type: DataType.ARRAY, data: [1, 2, 3]},
+  {type: DataType.BOOLEAN, data: false},
+];
 
 /**
- * Checks whether a field is overridden.
- * @param {string} jsonpath JSONPath of the Key.
- * @param {object} overrides Keys and their overridden values.
- * @return {boolean}
+ * Returns deficient array. Array's Item can have wrong datatype, wrong enum
+ * value, out of range values etc..
+ * Array Item's deficiency is determined by the deficientDataGenerator argument.
+ * @callback cb
+ * @param {object} schema Specification of data.
+ * @param {string} jsonpath jsonpath of the key/field.
+ * @param {cb} deficientDataGenerator
+ * @param {object} [overrides = {}] Keys and their overridden values.
+ * @param {object} [options = {}] Optional Additional Parameters.
+ * @return {array<object>}
  */
-function overridden(jsonpath, overrides) {
-  // eslint-disable-next-line new-cap
-  return (jsonpath !== '$' && JSONPath(jsonpath, overrides).length > 0);
+function getDeficientArrays(schema, jsonpath, deficientDataGenerator,
+    overrides = {}, options = {}) {
+  const deficientArrays = [];
+  const deficientItems = deficientDataGenerator(schema.items, `${jsonpath}[]`,
+      overrides, options);
+  deficientItems.forEach(function(deficientItem) {
+    const deficientArray = {
+      key: deficientItem.key,
+      data: [deficientItem.data],
+    };
+    /*
+      Since 'key', 'data' are overriden and added to the 'deficientData' object,
+      remove these fields and add the rest of the fields to the deficient data
+      object.
+    */
+    delete deficientItem.key;
+    delete deficientItem.data;
+    Object.assign(deficientArray, deficientItem);
+    deficientArrays.push(deficientArray);
+  });
+  return deficientArrays;
+}
+
+/**
+ * Returns deficient data from all the schemas present in the oneOf array.
+ * Data's deficiency is determined by the deficientDataGenerator argument.
+ * @callback cb
+ * @param {array<object>} schemas Specification of data.
+ * @param {string} jsonpath jsonpath of the key/field.
+ * @param {cb} deficientDataGenerator
+ * @param {object} [overrides = {}] Keys and their overridden values.
+ * @param {object} [options = {}] Optional Additional Parameters.
+ * @return {array<object>}
+ */
+function getOneOfDeficientData(schemas, jsonpath, deficientDataGenerator,
+    overrides = {}, options = {}) {
+  let deficientDatas = [];
+  schemas.forEach(function(schema) {
+    deficientDatas = deficientDatas.concat(deficientDataGenerator(schema,
+        jsonpath, overrides, options));
+  });
+  return deficientDatas;
+}
+
+/**
+ * Returns deficient object. Objects's key can have wrong datatype, wrong enum
+ * value, out of range values etc..
+ * Object's deficiency is determined by the deficientDataGenerator argument.
+ * @callback cb
+ * @param {object} schema Specification of data.
+ * @param {string} jsonpath jsonpath of the key/field.
+ * @param {cb} deficientDataGenerator
+ * @param {object} [overrides = {}] Keys and their overridden values.
+ * @param {object} [options = {}] Optional Additional Parameters.
+ * @return {array<object>}
+ */
+function getDeficientObjects(schema, jsonpath, deficientDataGenerator,
+    overrides = {}, options = {}) {
+  const deficientObjects = [];
+  const keys = Object.keys(schema.properties);
+  keys.forEach(function(key) {
+    const keySchema = schema.properties[key];
+    const deficientKeys = deficientDataGenerator(keySchema,
+        `${jsonpath}.${key}`, overrides, options);
+    deficientKeys.forEach(function(deficientKey) {
+      const data = getMockData(schema, jsonpath, overrides);
+      data[key] = deficientKey.data;
+      delete deficientKey.data;
+      const deficientObject = Object.assign({}, {data}, deficientKey);
+      deficientObjects.push(deficientObject);
+    });
+  });
+  return deficientObjects;
 }
 
 /**
  * Generates random objects of a schema with one of the key of object
  *    having a different datatype from the one specified in the schema.
  * @param {object} schema Specification of data.
- * @param {string} jsonpath jsonpath of the key/field/object.
+ * @param {string} jsonpath jsonpath of the key/field.
  * @param {object} overrides Keys and their overridden values.
- * @return {Array<object>} deficientData
+ * @return {array<object>} deficientData
  */
 function getDataDeficientByDataType(schema, jsonpath, overrides = {}) {
   if (!schema || overridden(jsonpath, overrides)) return [];
-
-  let deficientData = [];
-
   if (schema.oneOf) {
-    const schemas = schema.oneOf;
-    schemas.forEach(function(schema) {
-      deficientData = deficientData.concat(
-          getDataDeficientByDataType(schema, jsonpath, overrides));
-    });
-    return deficientData;
+    return getOneOfDeficientData(schema.oneOf, jsonpath,
+        getDataDeficientByDataType, overrides);
   }
-
+  let deficientDatas = [];
   if (schema.type === DataType.ARRAY) {
-    const deficientDatasOfItem =
-      getDataDeficientByDataType(schema.items, jsonpath, overrides);
-    deficientDatasOfItem.forEach(function(deficientDataOfItem) {
-      deficientData.push({
-        key: `${deficientDataOfItem.key}[0]`,
-        data: [deficientDataOfItem.data],
-        expectedDataType: deficientDataOfItem.expectedDataType,
-        actualDataType: deficientDataOfItem.actualDataType,
-      });
-    });
+    deficientDatas = deficientDatas.concat(getDeficientArrays(schema, jsonpath,
+        getDataDeficientByDataType, overrides));
   }
-
   if (schema.type === DataType.OBJECT) {
-    const keys = Object.keys(schema.properties);
-    keys.forEach(function(key) {
-      const keySchema = schema.properties[key];
-      const deficientDatasOfKey = getDataDeficientByDataType(keySchema,
-          `${jsonpath}.${key}`, overrides);
-      deficientDatasOfKey.forEach(function(deficientDataOfKey) {
-        const object = getMockData(schema, '$', overrides);
-        object[key] = deficientDataOfKey.data;
-        deficientData.push({
-          key: deficientDataOfKey.key,
-          data: object,
-          expectedDataType: deficientDataOfKey.expectedDataType,
-          actualDataType: deficientDataOfKey.actualDataType,
-        });
-      });
-    });
+    deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
+        getDataDeficientByDataType, overrides));
   }
-
   DUMMY.forEach(function(dummy) {
     if (dummy.type === schema.type) return;
     /*
-      Number can be both integer/decimal value, therefore we skip the
-      below case as it doesnt bring deficiency in data .
+      Skip the below cases, as it doesn't bring any deficiency in data.
+      1) (integer vs number) Number can have both integer/decimal value.
+      2) (string vs integer/decimal/boolean) String can have values of
+      integer/decimal/boolean datatype.
     */
     if (dummy.type === DataType.INTEGER &&
       schema.type === DataType.NUMBER) return;
 
-    /*
-      String can be a integer/decimal/boolean value, therefore we skip the
-      below case as it doesnt bring deficiency in data .
-    */
     if ((dummy.type === DataType.INTEGER ||
         dummy.type === DataType.NUMBER ||
         dummy.type === DataType.BOOLEAN) &&
         schema.type === DataType.STRING) return;
 
-    deficientData.push({
+    deficientDatas.push({
       key: jsonpath,
       data: dummy.data,
       expectedDataType: schema.type,
       actualDataType: dummy.type,
     });
   });
-  return deficientData;
+  return deficientDatas;
 }
 
 /**
  * Generates random objects of a schema with one of the key of object
  *    having a value not specified in the EnumList of the key.
  * @param {object} schema Specification of data
- * @param {string} jsonpath jsonpath of the key/field/object
- * @param {object} overrides Keys and their overridden values.
- * @return {Array<object>} deficientData
+ * @param {string} jsonpath jsonpath of the key/field.
+ * @param {object} [overrides = {}] Keys and their overridden values.
+ * @return {array<object>} deficientData
  */
 function getDataDeficientByEnum(schema, jsonpath, overrides = {}) {
   if (!schema || overridden(jsonpath, overrides)) return [];
-
   if (schema.oneOf) {
-    let deficientData = [];
-    const schemas = schema.oneOf;
-    schemas.forEach(function(schema) {
-      const childDeficientData =
-        getDataDeficientByEnum(schema, jsonpath, overrides);
-      deficientData = deficientData.concat(childDeficientData);
-    });
-    return deficientData;
+    return getOneOfDeficientData(schema.oneOf, jsonpath,
+        getDataDeficientByEnum, overrides);
   }
-
+  let deficientDatas = [];
+  if (schema.type === DataType.ARRAY) {
+    deficientDatas = deficientDatas.concat(getDeficientArrays(schema, jsonpath,
+        getDataDeficientByEnum, overrides));
+  }
+  if (schema.type === DataType.OBJECT) {
+    deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
+        getDataDeficientByEnum, overrides));
+  }
   if (schema.enum) {
-    const deficientData = [];
     DUMMY.forEach(function(dummy) {
       if (dummy.type === schema.type) {
-        deficientData.push({
+        deficientDatas.push({
           key: jsonpath,
           data: dummy.data,
           enumList: schema.enum,
@@ -172,41 +203,7 @@ function getDataDeficientByEnum(schema, jsonpath, overrides = {}) {
       }
     });
   }
-
-  if (schema.type === DataType.ARRAY) {
-    const deficientData = [];
-    const deficientDatasOfItem =
-      getDataDeficientByEnum(schema.items, jsonpath, overrides) || [];
-    deficientDatasOfItem.forEach(function(deficientDataOfItem) {
-      deficientData.push({
-        key: 'item' + deficientDataOfItem.key,
-        data: [deficientDataOfItem.data],
-        enumList: deficientDataOfItem.enumList,
-      });
-    });
-    return deficientData;
-  }
-
-  if (schema.type === DataType.OBJECT) {
-    const deficientData = [];
-    const keys = Object.keys(schema.properties);
-    keys.forEach(function(key) {
-      const keySchema = schema.properties[key];
-      const deficientDatasOfKey = getDataDeficientByEnum(
-          keySchema, `${jsonpath}.${key}`, overrides) || [];
-      deficientDatasOfKey.forEach(function(deficientDataOfKey) {
-        const object = getMockData(schema, '$', overrides);
-        object[key] = deficientDataOfKey.data;
-        deficientData.push({
-          key: deficientDataOfKey.key,
-          data: object,
-          enumList: deficientDataOfKey.enumList,
-        });
-      });
-    });
-    return deficientData;
-  }
-  return [];
+  return deficientDatas;
 }
 
 /**
@@ -214,27 +211,29 @@ function getDataDeficientByEnum(schema, jsonpath, overrides = {}) {
  *    having a number out of the bounds, specified in schema.
  * @param {object} schema Specification of data
  * @param {string} jsonpath jsonpath of the key/field/object
+ * @param {object} [overrides = {}] Keys and their overridden values.
  * @param {object} [options = {}] Optional Additional parameters.
  * @param {boolean=} options.checkMinimum Checks for schema.minimum and returns
  *    data with values less than schema.minimum.
  * @param {boolean=} options.checkMaximum Checks for schema.maximum and returns
  *    data with values more than schema.minimum.
- * @param {object} overrides Keys and their overridden values.
- * @return {Array<object>} deficientData
+ * @return {array<object>} deficientData
  */
-function getDataDeficientByNumberLimit(
-    schema, jsonpath, options = {}, overrides = {}) {
+function getDataDeficientByNumberLimit(schema, jsonpath, overrides = {},
+    options = {}) {
   if (!schema || overridden(jsonpath, overrides)) return [];
-
   if (schema.oneOf) {
-    let deficientData = [];
-    const schemas = schema.oneOf;
-    schemas.forEach(function(schema) {
-      const childDeficientData =
-        getDataDeficientByNumberLimit(schema, jsonpath, options, overrides);
-      deficientData = deficientData.concat(childDeficientData);
-    });
-    return deficientData;
+    return getOneOfDeficientData(schema.oneOf, jsonpath,
+        getDataDeficientByNumberLimit, overrides, options);
+  }
+  let deficientDatas = [];
+  if (schema.type === DataType.ARRAY) {
+    deficientDatas = deficientDatas.concat(getDeficientArrays(schema, jsonpath,
+        getDataDeficientByNumberLimit, overrides, options));
+  }
+  if (schema.type === DataType.OBJECT) {
+    deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
+        getDataDeficientByNumberLimit, overrides, options));
   }
 
   if (schema.type === DataType.NUMBER || schema.type === DataType.INTEGER) {
@@ -253,305 +252,132 @@ function getDataDeficientByNumberLimit(
         maximumAllowed: schema.maximum,
       });
     }
-    return deficientData;
+    deficientDatas = deficientDatas.concat(deficientData);
   }
-
-  if (schema.type === DataType.ARRAY) {
-    const deficientData = [];
-    const deficientDatasOfItem = getDataDeficientByNumberLimit(
-        schema.items, `${jsonpath}[0]`, options, overrides) || [];
-    deficientDatasOfItem.forEach(function(deficientDataOfItem) {
-      if (options.checkMinimum && deficientDataOfItem.minimumAllowed) {
-        deficientData.push({
-          key: deficientDataOfItem.key,
-          data: [deficientDataOfItem.data],
-          minimumAllowed: deficientDataOfItem.minimumAllowed,
-        });
-      }
-      if (options.checkMaximum && deficientDataOfItem.maximumAllowed) {
-        deficientData.push({
-          key: deficientDataOfItem.key,
-          data: [deficientDataOfItem.data],
-          maximumAllowed: deficientDataOfItem.maximumAllowed,
-        });
-      }
-    });
-    return deficientData;
-  }
-
-  if (schema.type === DataType.OBJECT) {
-    const deficientData = [];
-    const keys = Object.keys(schema.properties);
-    keys.forEach(function(key) {
-      const keySchema = schema.properties[key];
-      const deficientDatasOfKey = getDataDeficientByNumberLimit(
-          keySchema, `${jsonpath}.${key}`, options, overrides) || [];
-      deficientDatasOfKey.forEach(function(deficientDataOfKey) {
-        const object = getMockData(schema, '$', overrides);
-        object[key] = deficientDataOfKey.data;
-        if (options.checkMinimum && deficientDataOfKey.minimumAllowed) {
-          deficientData.push({
-            key: deficientDataOfKey.key,
-            data: object,
-            minimumAllowed: deficientDataOfKey.minimumAllowed,
-          });
-        }
-        if (options.checkMaximum && deficientDataOfKey.maximumAllowed) {
-          deficientData.push({
-            key: deficientDataOfKey.key,
-            data: object,
-            maximumAllowed: deficientDataOfKey.maximumAllowed,
-          });
-        }
-      });
-    });
-    return deficientData;
-  }
-  return [];
+  return deficientDatas;
 }
 
 /**
  * Generates random objects of a schema leaving one of the optional key.
  * @param {object} schema Specification of data
- * @param {string} jsonpath jsonpath of the key/field/object.
- * @param {object} overrides Keys and their overridden values.
- * @return {Array<object>} deficientData
+ * @param {string} jsonpath jsonpath of the key/field.
+ * @param {object} [overrides = {}] Keys and their overridden values.
+ * @return {array<object>} deficientData
  */
 function getDataDeficientByOptionalKey(schema, jsonpath, overrides = {}) {
   if (!schema || overridden(jsonpath, overrides)) return [];
-
   if (schema.oneOf) {
-    let deficientData = [];
-    const schemas = schema.oneOf;
-    schemas.forEach(function(schema) {
-      const childDeficientData =
-        getDataDeficientByOptionalKey(schema, jsonpath, overrides);
-      deficientData = deficientData.concat(childDeficientData);
-    });
-    return deficientData;
+    return getOneOfDeficientData(schema.oneOf, jsonpath,
+        getDataDeficientByOptionalKey, overrides);
   }
-
+  let deficientDatas = [];
   if (schema.type === DataType.ARRAY) {
-    const deficientData = [];
-    const deficientDatasOfItem =
-    getDataDeficientByOptionalKey(schema.items, jsonpath, overrides) || [];
-    deficientDatasOfItem.forEach(function(deficientDataOfItem) {
-      deficientData.push({
-        data: [deficientDataOfItem.data],
-        missingOptionalKey: deficientDataOfItem.missingOptionalKey,
-      });
-    });
-    return deficientData;
+    deficientDatas = deficientDatas.concat(getDeficientArrays(schema, jsonpath,
+        getDataDeficientByOptionalKey, overrides));
   }
-
   if (schema.type === DataType.OBJECT) {
-    const deficientData = [];
+    deficientDatas = deficientDatas.concat(
+        getDeficientObjects(schema, jsonpath, getDataDeficientByOptionalKey));
     const keys = Object.keys(schema.properties);
-    keys.forEach(function(key) {
-      const keySchema = schema.properties[key];
-      const deficientDatasOfKey = getDataDeficientByOptionalKey(
-          keySchema, `${jsonpath}.${key}`, overrides) || [];
-      deficientDatasOfKey.forEach(function(deficientDataOfKey) {
-        const object = getMockData(schema, '$', overrides);
-        object[key] = deficientDataOfKey.data;
-
-        deficientData.push({
-          data: object,
-          missingOptionalKey: deficientDataOfKey.missingOptionalKey,
-        });
-      });
-    });
-
     const requiredKeys = schema.required || [];
     keys.forEach(function(key) {
-      if (!requiredKeys.includes(key) &&
-        !overridden(`${jsonpath}.${key}`, overrides)) {
-        const object = getMockData(schema, '$', overrides);
-        delete object[key];
-        deficientData.push({
-          data: object,
+      if (!requiredKeys.includes(key)) {
+        const data = getMockData(schema, jsonpath, overrides);
+        delete data[key];
+        deficientDatas.push({
+          data,
           missingOptionalKey: `${jsonpath}.${key}`,
         });
       }
     });
-    return deficientData;
   }
-  return [];
+  return deficientDatas;
 }
 
 /**
  * Generates random objects of a schema leaving one of the required key.
  * @param {object} schema Specification of data
- * @param {string} jsonpath jsonpath of the key/field/object.
- * @param {object} overrides Keys and their overridden values.
- * @return {Array<object>} deficientData
+ * @param {string} jsonpath jsonpath of the key/field/object
+ * @param {object} [overrides = {}] Keys and their overridden values.
+ * @return {array<object>} deficientData
  */
 function getDataDeficientByRequiredKey(schema, jsonpath, overrides = {}) {
   if (!schema || overridden(jsonpath, overrides)) return [];
-
   if (schema.oneOf) {
-    let deficientData = [];
-    const schemas = schema.oneOf;
-    schemas.forEach(function(schema) {
-      const childDeficientData =
-        getDataDeficientByRequiredKey(schema, jsonpath, overrides);
-      deficientData = deficientData.concat(childDeficientData);
-    });
-    return deficientData;
+    return getOneOfDeficientData(schema.oneOf, jsonpath,
+        getDataDeficientByRequiredKey, overrides);
   }
-
+  let deficientDatas = [];
   if (schema.type === DataType.ARRAY) {
-    const deficientData = [];
-    const deficientDatasOfItem =
-      getDataDeficientByRequiredKey(schema.items, jsonpath, overrides) || [];
-    deficientDatasOfItem.forEach(function(deficientDataOfItem) {
-      deficientData.push({
-        data: [deficientDataOfItem.data],
-        missingRequiredKey: deficientDataOfItem.missingRequiredKey,
-      });
-    });
-    return deficientData;
+    deficientDatas = deficientDatas.concat(getDeficientArrays(schema, jsonpath,
+        getDataDeficientByRequiredKey, overrides));
   }
-
   if (schema.type === DataType.OBJECT) {
-    const deficientData = [];
+    deficientDatas = deficientDatas.concat(
+        getDeficientObjects(schema, jsonpath, getDataDeficientByRequiredKey));
     const keys = Object.keys(schema.properties);
-    keys.forEach(function(key) {
-      const keySchema = schema.properties[key];
-      const deficientDatasOfKey = getDataDeficientByRequiredKey(
-          keySchema, `${jsonpath}.${key}`, overrides) || [];
-      deficientDatasOfKey.forEach(function(deficientDataOfKey) {
-        const object = getMockData(schema, '$', overrides);
-        object[key] = deficientDataOfKey.data;
-        deficientData.push({
-          data: object,
-          missingRequiredKey: deficientDataOfKey.missingRequiredKey,
-        });
-      });
-    });
-
     const requiredKeys = schema.required || [];
     keys.forEach(function(key) {
-      if (requiredKeys.includes(key) &&
-        !overridden(`${jsonpath}.${key}`, overrides)) {
-        const object = getMockData(schema, '$', overrides);
-        delete object[key];
-        deficientData.push({
-          data: object,
+      if (requiredKeys.includes(key)) {
+        const data = getMockData(schema, jsonpath, overrides);
+        delete data[key];
+        deficientDatas.push({
+          data,
           missingRequiredKey: `${jsonpath}.${key}`,
         });
       }
     });
-    return deficientData;
   }
-
-  return [];
+  return deficientDatas;
 }
 
 /**
  * Generates random objects of a schema with one of the key of object
  *    having a string length out of the bounds, specified in schema.
  * @param {object} schema Specification of data
- * @param {string} jsonpath jsonpath of the key/field/object
+ * @param {string} jsonpath jsonpath of the key/field.
+ * @param {object} [overrides = {}] Keys and their overridden values.
  * @param {object} [options = {}] Optional Additional parameters.
  * @param {boolean=} options.checkMinimumLength Checks for schema.minLength and
  *    returns strings with length less than schema.minLength.
  * @param {boolean=} options.checkMaximumLength Checks for schema.maxLength and
  *    returns strings with length more than schema.maxLength.
- * @param {object} overrides Keys and their overridden values.
  * @return {Array<object>} deficientData
  */
-function getDataDeficientByStringLength(
-    schema, jsonpath, options = {}, overrides = {}) {
+function getDataDeficientByStringLength(schema, jsonpath, overrides = {},
+    options = {}) {
   if (!schema || overridden(jsonpath, overrides)) return [];
-
   if (schema.oneOf) {
-    let deficientData = [];
-    const schemas = schema.oneOf;
-    schemas.forEach(function(schema) {
-      const childDeficientData = getDataDeficientByStringLength(
-          schema, jsonpath, options, overrides) || [];
-      deficientData = deficientData.concat(childDeficientData);
-    });
-    return deficientData;
+    return getOneOfDeficientData(schema.oneOf, jsonpath,
+        getDataDeficientByStringLength, overrides, options);
+  }
+  let deficientDatas = [];
+  if (schema.type === DataType.ARRAY) {
+    deficientDatas = deficientDatas.concat(getDeficientArrays(schema, jsonpath,
+        getDataDeficientByStringLength, overrides, options));
+  }
+  if (schema.type === DataType.OBJECT) {
+    deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
+        getDataDeficientByStringLength, overrides, options));
   }
 
   if (schema.type === DataType.STRING) {
-    const deficientData = [];
     if (options.checkMinimumLength && schema.minLength) {
-      deficientData.push({
+      deficientDatas.push({
         key: jsonpath,
         data: getRandomString(schema.minLength-1),
         minimumLengthAllowed: schema.minLength,
       });
     }
     if (options.checkMaximumLength && schema.maxLength) {
-      deficientData.push({
+      deficientDatas.push({
         key: jsonpath,
         data: getRandomString(schema.maxLength+1),
         maximumLengthAllowed: schema.maxLength,
       });
     }
-
-    return deficientData;
   }
-
-  if (schema.type === DataType.ARRAY) {
-    const deficientData = [];
-    const deficientDatasOfItem = getDataDeficientByStringLength(
-        schema.items, `${jsonpath}[0]`, options, overrides) || [];
-    deficientDatasOfItem.forEach(function(deficientDataOfItem) {
-      if (options.checkMinimumLength &&
-          deficientDataOfItem.minimumLengthAllowed) {
-        deficientData.push({
-          key: deficientDataOfItem.key,
-          data: [deficientDataOfItem.data],
-          minimumLengthAllowed: deficientDataOfItem.minimumLengthAllowed,
-        });
-      }
-      if (options.checkMaximumLength &&
-          deficientDataOfItem.maximumLengthAllowed) {
-        deficientData.push({
-          key: deficientDataOfItem.key,
-          data: [deficientDataOfItem.data],
-          maximumLengthAllowed: deficientDataOfItem.maximumLengthAllowed,
-        });
-      }
-    });
-    return deficientData;
-  }
-
-  if (schema.type === DataType.OBJECT) {
-    const deficientData = [];
-    const keys = Object.keys(schema.properties);
-    keys.forEach(function(key) {
-      const keySchema = schema.properties[key];
-      const deficientDatasOfItem = getDataDeficientByStringLength(
-          keySchema, `${jsonpath}.${key}`, options, overrides) || [];
-      deficientDatasOfItem.forEach(function(deficientDataOfItem) {
-        const object = getMockData(schema, '$', overrides);
-        object[key] = deficientDataOfItem.data;
-        if (options.checkMinimumLength &&
-          deficientDataOfItem.minimumLengthAllowed) {
-          deficientData.push({
-            key: deficientDataOfItem.key,
-            data: object,
-            minimumLengthAllowed: deficientDataOfItem.minimumLengthAllowed,
-          });
-        }
-        if (options.checkMaximumLength &&
-          deficientDataOfItem.maximumLengthAllowed) {
-          deficientData.push({
-            key: deficientDataOfItem.key,
-            data: object,
-            maximumLengthAllowed: deficientDataOfItem.maximumLengthAllowed,
-          });
-        }
-      });
-    });
-    return deficientData;
-  }
-  return [];
+  return deficientDatas;
 }
 
 module.exports = {

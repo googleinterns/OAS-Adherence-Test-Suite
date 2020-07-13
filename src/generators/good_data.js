@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-/** @module datagen/adequate_datagen */
+/** @module generators/good_data */
 /**
- * @fileoverview Contains functions which can generate random data,
- * random request body, random headers that complies with schema.
+ * @fileoverview Contains functions which can generate random
+ * data/request-body/request-headers of a given schema.
  */
 
 const RandExp = require('randexp');
@@ -26,18 +26,8 @@ const faker = require('faker');
 const {logger} = require('../log');
 const {SchemaFormat, DataType} = require('../constants');
 const {JSONPath} = require('jsonpath-plus');
-const {getRandomNumber, getRandomString} = require('../utils/app');
-
-/**
- * Checks whether a field has a overridden/reserved value.
- * @param {string} jsonpath jsonpath of the Key/field.
- * @param {object} overrides Keys and their overridden values.
- * @return {boolean}
- */
-function overridden(jsonpath, overrides) {
-  // eslint-disable-next-line new-cap
-  return (jsonpath !== '$' && JSONPath(jsonpath, overrides).length > 0);
-}
+const {getRandomNumber, getRandomString, buildError, overridden} =
+  require('../utils/app');
 
 /**
  * Generates a random integer that complies with schema.
@@ -94,36 +84,21 @@ function getMockString(schema, jsonpath, overrides = {}) {
   }
   if (schema.format) {
     switch (schema.format) {
-      case SchemaFormat.EMAIL: {
-        const randomEmail = faker.internet.email();
-        return randomEmail;
-      }
-      case SchemaFormat.UUID: {
-        const randomUUID = faker.random.uuid();
-        return randomUUID;
-      }
-      case SchemaFormat.URI: {
-        const randomURI = faker.internet.url();
-        return randomURI;
-      }
-      case SchemaFormat.IPV4: {
-        const randomIPv4 = faker.internet.ip();
-        return randomIPv4;
-      }
-      case SchemaFormat.IPV6: {
-        const randomIPv6 = faker.internet.ipv6();
-        return randomIPv6;
-      }
+      case SchemaFormat.EMAIL:
+        return faker.internet.email();
+      case SchemaFormat.UUID:
+        return faker.random.uuid();
+      case SchemaFormat.URI:
+        return faker.internet.url();
+      case SchemaFormat.IPV4:
+        return faker.internet.ip();
+      case SchemaFormat.IPV6:
+        return faker.internet.ipv6();
       default: {
-        const errorInfo = {
-          errorType: 'Limited Support Error',
-          errorDetails: {
-            key: jsonpath,
-            format: schema.format,
-            supportedFormats: 'email, uuid, uri, ipv4/ipv6',
-          },
-        };
-        logger['info'](errorInfo);
+        logger.warn(buildError(Error.LIMITED_SUPPORT, null, jsonpath, {
+          format: schema.format,
+          supportedFormats: 'email, uuid, uri, ipv4/ipv6',
+        }));
         return '';
       }
     }
@@ -134,8 +109,8 @@ function getMockString(schema, jsonpath, overrides = {}) {
       const regex = new RegExp(schema.pattern);
       return new RandExp(regex).gen();
     } catch (err) {
-      logger['info'](`Invalid Schema Pattern - ${schema.pattern}`);
-      logger['error'](err);
+      logger.warn(buildError(Error.PATTERN, null, jsonpath,
+          {pattern: schema.pattern}));
       return '';
     }
   }
@@ -227,7 +202,10 @@ function getMockData(schema, jsonpath, overrides = {}) {
     case DataType.OBJECT:
       return getMockObject(schema, jsonpath, overrides);
     default:
-      logger['error'](`No support for ${schema.type}`);
+      logger.warn(buildError(Error.LIMITED_SUPPORT, null, jsonpath, {
+        schemaType: schema.type,
+        supportedTypes: 'boolean, integer, number, string, array, object',
+      }));
       return null;
   }
 }

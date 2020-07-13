@@ -16,218 +16,113 @@
 
 /** @module validator */
 /**
- * @fileoverview Contains functions which validate data against a schema.
+ * @fileoverview Contains functions which validates data against a schema and
+ * provides errors(if any) with details.
  */
 
 const validator = require('validator');
 const ipRegex = require('ip-regex');
 const isNumber = require('is-number');
 const isInteger = require('is-integer');
-const {SchemaFormat, DataType} = require('./constants');
+const {SchemaFormat, DataType, Error} = require('./constants');
+const {buildError} = require('./utils/app');
 const {logger} = require('./log');
+
 
 /**
  * Returns error if data is not of Boolean Data type.<br>
  * Note: Data should't be a logical condition which returns a boolean value,
  * it should be a Boolean false or Boolean true.
  * @param {*} data Input Data.
- * @param {object} schema Specification of the Boolean.
+ * @param {object} schema Schema.
+ * @param {string} jsonpath jsonpath of the Boolean key/field.
  * @param {object} [options = {}] Optional Additional Parameters.
- * @param {string} [identifier = '$'] Name of the Boolean key/field.
- * @return {Array< object >} Array of Errors.
+ * @return {array<object>} Array of Errors.
  */
-function isBoolean(data, schema, options = {}, identifier = '$') {
-  let errors = [];
-  if (!(data === true || data === false)) {
-    errors = errors.concat([{
-      errorType: 'Boolean Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-      },
-    }]);
-  }
-  return errors;
+function isBoolean(data, schema, jsonpath, options = {}) {
+  return (!(data === true || data === false)) ?
+    buildError(Error.DATA_TYPE, data, jsonpath) : [];
 }
 
 /**
  * Returns error if the items of array doesn't comply with the schema.
- * @param {Array} data Input Array.
+ * @param {array} data Input Array.
  * @param {object} schema Specification of the Array.
+ * @param {string} jsonpath jsonpath of the Array key/field.
  * @param {object} [options = {}] Optional Additional Parameters.
- * @param {string} [identifier = '$'] Name of the Array key/field.
- * @return {Array< object >} Array of Errors.
+ * @return {array<object>} Array of Errors.
  */
-function validateArrayAgainstSchema(
-    data, schema, options = {}, identifier = '$') {
+function validateArrayAgainstSchema(data, schema, jsonpath, options = {}) {
+  if (!Array.isArray(data)) {
+    return buildError(Error.DATA_TYPE, data, jsonpath,
+        {dataType: {present: typeof(data), expected: DataType.ARRAY}});
+  }
   const itemSchema = schema.items;
   let errors = [];
-  data = data || [];
   data.forEach(function(itemData) {
     const itemError =
-      validateDataAgainstSchema(itemData, itemSchema, options, identifier);
+      validateDataAgainstSchema(itemData, itemSchema, jsonpath, options);
     errors = errors.concat(itemError);
   });
   return errors;
 }
 
 /**
- * Returns error if the Number doesn't comply with the schema.
- * @param {*} data Input Data.
- * @param {object} schema Specification of the Number.
- * @param {object} [options = {}] Optional Additional Parameters.
- * @param {string} [identifier = '$'] Name of the Number key/field.
- * @return {Array< object >} Array of Errors.
- */
-function validateNumberAgainstSchema(
-    data, schema, options = {}, identifier = '$') {
-  const errors = [];
-  if (!isNumber(data)) {
-    errors.push({
-      errorType: 'DataType Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        expectedDataType: DataType.NUMBER,
-        receivedDataType: typeof(data),
-      },
-    });
-    return errors;
-  }
-
-  const low = schema.minimum;
-  const high = schema.maximum;
-  if ((low && data < low) || (high && data > high)) {
-    errors.push({
-      errorType: 'Number Range Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        minAllowed: low,
-        maxAllowed: high,
-      },
-    });
-  }
-  return errors;
-}
-
-/**
- * Returns error if the Integer doesn't comply with the schema.
+ * Returns error if the numeric value doesn't comply with the schema.
  * @param {*} data Input Data.
  * @param {object} schema Specification of the Data.
+ * @param {string} jsonpath jsonpath of the Numeric key/field.
  * @param {object} [options = {}] Optional Additional Parameters.
- * @param {string} [identifier = '$'] Name of the key/field.
- * @return {Array< object >} Array of Errors.
+ * @return {array<object>} Array of Errors.
  */
-function validateIntegerAgainstSchema(
-    data, schema, options = {}, identifier = '$') {
-  const errors = [];
-  if (!isInteger(data)) {
-    errors.push({
-      errorType: 'DataType Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        expectedDataType: DataType.INTEGER,
-        receivedDataType: typeof(data),
-      },
-    });
-    return errors;
+function validateNumericAgainstSchema(data, schema, jsonpath, options = {}) {
+  if (schema.type === DataType.INTEGER && !isInteger(data)) {
+    return buildError(Error.DATA_TYPE, data, jsonpath,
+        {dataType: {present: typeof(data), expected: DataType.INTEGER}});
   }
-
+  if (schema.type === DataType.NUMBER && !isNumber(data)) {
+    return buildError(Error.DATA_TYPE, data, jsonpath,
+        {dataType: {present: typeof(data), expected: DataType.NUMBER}});
+  }
   const low = schema.minimum;
   const high = schema.maximum;
   if ((low && data < low) || (high && data > high)) {
-    errors.push({
-      errorType: 'Integer Range Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        minAllowed: low,
-        maxAllowed: high,
-      },
-    });
+    return buildError(Error.OUT_OF_RANGE, data, jsonpath, {low, high});
   }
-  return errors;
+  return [];
 }
 
 /**
  * Returns error if the Object and its property doesn't comply with the schema.
  * @param {*} data Input Data.
  * @param {object} schema Specification of the Data.
+ * @param {string} jsonpath jsonpath of the Object key/field.
  * @param {object} [options = {}] Optional Additional Parameters.
- * @param {string} [identifier = '$'] Name of the key/field.
- * @return {Array< object >} Array of Errors.
+ * @return {array<object>} Array of Errors.
  */
-function validateObjectAgainstSchema(
-    data, schema, options = {}, identifier = '$') {
-  let errors = [];
+function validateObjectAgainstSchema(data, schema, jsonpath, options = {}) {
   if (typeof(data) !== DataType.OBJECT || Array.isArray(data)) {
-    errors.push({
-      errorType: 'DataType Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        expectedDataType: DataType.OBJECT,
-        receivedDataType: typeof(data),
-      },
-    });
-    return errors;
-  }
-  if (schema.properties === undefined) {
-    // [DEV] Cross-Verification Required.
-    errors.push({
-      errorType: 'OAS 3.0 Error',
-      errorDetails: {
-        key: identifier,
-        value: schema,
-        errorMessage: 'Object should have properties field',
-      },
-    });
-
-    return errors;
+    return buildError(Error.DATA_TYPE, data, jsonpath,
+        {dataType: {present: typeof(data), expected: DataType.OBJECT}});
   }
 
-  const keys = Object.keys(data);
-  keys.sort();
-  for (let index = 1; index < keys.length; index++) {
-    if (keys[index] === keys[index-1]) {
-      // To avoid sending same error multiple times.
-      if (index > 2 && keys[index] === keys[index-2]) continue;
-      errors.push({
-        errorType: 'Duplicate Key Error',
-        errorDetails: {
-          key: identifier,
-          value: data,
-          duplicateKey: keys[index],
-        },
-      });
-    }
-  }
-  if (errors.length) return errors;
-
+  let errors = [];
   if (schema.required) {
     const requiredKeys = schema.required;
     requiredKeys.forEach(function(requiredKey) {
-      if (data[requiredKey] === undefined) {
-        errors.push({
-          errorType: 'Required Key Error',
-          errorDetails: {
-            key: identifier,
-            value: data,
-            missingKey: requiredKey,
-          },
-        });
+      if (data[requiredKey] == null) {
+        errors = errors.concat(
+            buildError(Error.REQUIRED_KEY, null, jsonpath, {requiredKey}));
       }
     });
     if (errors.length) return errors;
   }
 
-  keys.forEach(function(key) {
+  const dataKeys = Object.keys(data);
+  dataKeys.forEach(function(key) {
     const keySchema = schema.properties[key];
-    const newIdentifier = identifier + '.' + key;
-    const valueError =
-        validateDataAgainstSchema(data[key], keySchema, options, newIdentifier);
+    const valueError = validateDataAgainstSchema(
+        data[key], keySchema, `${jsonpath}.${key}`, options);
     errors = errors.concat(valueError);
   });
   return errors;
@@ -247,29 +142,19 @@ function validateObjectAgainstSchema(
  *    priority than schema.minLength.
  * @param {*} data Input Data.
  * @param {object} schema Specification of the Data.
+ * @param {string} jsonpath jsonpath of the String key/field.
  * @param {object} [options = {}] Optional Additional Parameters.
- * @param {string} [identifier = '$'] Name of the key/field.
- * @return {Array< object >} Array of Errors.
+ * @return {array<object>} Array of Errors.
  */
-function validateStringAgainstSchema(
-    data, schema, options = {}, identifier = '$') {
-  const errors = [];
+function validateStringAgainstSchema(data, schema, jsonpath, options = {}) {
   if (typeof(data) !== DataType.STRING) {
-    errors.push({
-      errorType: 'DataType Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        expectedDataType: DataType.STRING,
-        receivedDataType: typeof(data),
-      },
-    });
-    return errors;
+    return buildError(Error.DATA_TYPE, data, jsonpath,
+        {dataType: {present: typeof(data), expected: DataType.STRING}});
   }
 
   if (schema.format) {
     let formatError = false;
-    let errorInfo;
+    let errorObject;
     switch (schema.format) {
       case SchemaFormat.EMAIL:
         formatError |= !validator.isEmail(data);
@@ -281,79 +166,46 @@ function validateStringAgainstSchema(
         formatError |= !validator.isURL(data);
         break;
       case SchemaFormat.IPV4:
-        formatError |= !ipRegex.v4(data);
+        formatError |= !ipRegex.v4({exact: true}).test(data);
         break;
       case SchemaFormat.IPV6:
-        formatError |= !ipRegex.v6(data);
+        formatError |= !ipRegex.v6({exact: true}).test(data);
         break;
       default:
-        errorInfo = {
-          errorType: 'Limited Support Error',
-          errorDetails: {
-            format: schema.format,
-            supportedFormats: 'email, uuid, uri, ipv4/ipv6',
-          },
-        };
-        logger['warn'](errorInfo);
-        errors.push(errorInfo);
-        break;
-    }
-
-    if (formatError) {
-      errors.push({
-        errorType: 'Format Error',
-        errorDetails: {
-          key: identifier,
-          value: data,
+        errorObject = buildError(Error.LIMITED_SUPPORT, data, jsonpath, {
           format: schema.format,
-        },
-      });
+          supportedFormats: 'email, uuid, uri, ipv4/ipv6',
+        });
+        logger.warn(errorObject);
+        return errorObject;
     }
-    return errors;
+    if (formatError) {
+      return buildError(Error.FORMAT, data, jsonpath, {format: schema.format});
+    }
+    return [];
   }
 
   if (schema.pattern) {
     try {
       const regex = new RegExp(schema.pattern);
       if (!regex.test(data)) {
-        errors.push({
-          errorType: 'Regex Mismatch Error',
-          errorDetails: {
-            key: identifier,
-            value: data,
-            pattern: schema.pattern,
-            regexObject: regex,
-          },
-        });
+        return buildError(Error.PATTERN, data, jsonpath,
+            {pattern: schema.pattern, regexObject: regex});
       }
     } catch (err) {
-      errors.push({
-        errorType: 'OAS 3.0 Error',
-        errorDetails: {
-          key: identifier,
-          value: data,
-          pattern: schema.pattern,
-          errorMessage: 'Invalid Regex Expression',
-        },
+      return buildError(Error.OAS_DOC, data, jsonpath, {
+        pattern: schema.pattern,
+        errorMessage: 'Invalid Pattern/Regex Expression',
       });
     }
-    return errors;
+    return [];
   }
 
   const low = schema.minLength;
   const high = schema.maxLength;
   if ((low && data.length < low) || (high && data.length > high)) {
-    errors.push({
-      errorType: 'String Length Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        minAllowed: low,
-        maxAllowed: high,
-        dataLength: data.length,
-      },
-    });
-    return errors;
+    return buildError(Error.OUT_OF_RANGE, data, jsonpath,
+        {low, high, stringLength: data.length});
   }
   return [];
 }
@@ -362,134 +214,64 @@ function validateStringAgainstSchema(
  * Returns error if the data doesn't comply with the schema.
  * @param {*} data Input Data.
  * @param {object} schema Specification of the Data.
+ * @param {string} jsonpath jsonpath of the data.
  * @param {object} [options = {}] Optional Additional Parameters.
- * @param {string} [identifier = '$'] Name of the key/field.
- * @return {Array< object >} Array of Errors.
+ * @return {array<object>} Array of Errors.
  */
-function validateDataAgainstSchema(
-    data, schema, options = {}, identifier = '$') {
-  if (schema === undefined) {
-    const errors = [];
-    /*
-      [IMP] [DEV] Shouldn't log/throw errors when data is validated against
-      a schema mentioned in schema.oneOf.
-    */
-    const errorInfo = {
-      errorType: 'Excess of Data Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        schema,
-      },
-    };
-    if (options.strictValidation) {
-      errors.push(errorInfo);
-    }
-    // logger['warn'](errorInfo);
-    return errors;
+function validateDataAgainstSchema(data, schema, jsonpath, options = {}) {
+  if (!schema) return [];
+  if (data == null) {
+    return buildError(Error.DATA_LACK, data, jsonpath, {schema});
   }
-
-  if (data === undefined) {
-    const errors = [];
-    errors.push({
-      errorType: 'Lack of Data Error',
-      errorDetails: {
-        key: identifier,
-        value: data,
-        schema,
-      },
-    });
-    return errors;
-  }
-
   if (schema.oneOf) {
-    const errors = [];
-
     const schemas = schema.oneOf;
-    let oneOfError = true;
-    schemas.forEach(function(schema) {
-      const childErrors = validateDataAgainstSchema(
-          data, schema, options, identifier);
-      if (!childErrors.length) oneOfError = false;
+    const dataMatchedWithASchema = schemas.some(function(schema) {
+      const errors = validateDataAgainstSchema(
+          data, schema, jsonpath, options);
+      return errors.length === 0;
     });
 
-    if (oneOfError) {
-      errors.push({
-        errorType: 'oneOf Error',
-        errorDetails: {
-          key: identifier,
-          value: data,
-          schemaList: JSON.stringify(schema.oneOf),
-        },
-      });
+    if (!dataMatchedWithASchema) {
+      return buildError(Error.ONE_OF, data, jsonpath,
+          {oneOf: JSON.stringify(schema.oneOf)});
     }
-    return errors;
-  }
-
-  if (schema.type !== typeof(data)) {
-    const errors = [];
-    /*
-      Extra check for schema.type = "integer" and schema.type = "array"
-      as "integer", "array" are not built-in datatypes in Javascript.
-    */
-    if ((schema.type === DataType.INTEGER && isInteger(data)) ||
-      (schema.type === DataType.ARRAY && Array.isArray(data))) {
-      // Don't throw error.
-    } else {
-      errors.push({
-        errorType: 'DataType Error',
-        errorDetails: {
-          key: identifier,
-          value: data,
-          expectedDataType: schema.type,
-          receivedDataType: typeof(data),
-        },
-      });
-    }
-    if (errors.length) return errors;
+    return [];
   }
 
   if (schema.enum) {
-    const errors = [];
-    let isValid = false;
-    const items = schema.enum;
-    items.forEach(function(item) {
-      isValid = (data === item) ? true: isValid;
-    });
-    if (!isValid) {
-      errors.push({
-        errorType: 'Enum Error',
-        errorDetails: {
-          key: identifier,
-          value: data,
-          enumList: items,
-        },
-      });
+    if (typeof(data) !== schema.type) {
+      return buildError(Error.DATA_TYPE, data, jsonpath, {schema});
     }
-    return errors;
+    const enumList = schema.enum;
+    const dataPresentInEnumList = enumList.some(function(enumValue) {
+      return (data === enumValue);
+    });
+
+    if (!dataPresentInEnumList) {
+      return buildError(Error.ENUM, data, jsonpath, {enumList});
+    }
+    return [];
   }
 
+  let error;
   switch (schema.type) {
     case DataType.BOOLEAN:
-      return isBoolean(data, schema, options, identifier);
+      return isBoolean(data, schema, jsonpath, options);
     case DataType.NUMBER:
-      return validateNumberAgainstSchema(data, schema, options, identifier);
+      return validateNumericAgainstSchema(data, schema, jsonpath, options);
     case DataType.INTEGER:
-      return validateIntegerAgainstSchema(data, schema, options, identifier);
+      return validateNumericAgainstSchema(data, schema, jsonpath, options);
     case DataType.STRING:
-      return validateStringAgainstSchema(data, schema, options, identifier);
+      return validateStringAgainstSchema(data, schema, jsonpath, options);
     case DataType.ARRAY:
-      return validateArrayAgainstSchema(data, schema, options, identifier);
+      return validateArrayAgainstSchema(data, schema, jsonpath, options);
     case DataType.OBJECT:
-      return validateObjectAgainstSchema(data, schema, options, identifier);
+      return validateObjectAgainstSchema(data, schema, jsonpath, options);
     default:
-      logger['error']({
-        key: identifier,
-        value: data,
-        schema,
-        errorMessage: `Missed to handle some case in
-        validateDataAgainstSchema Function`,
+      error = buildError(Error.LIMITED_SUPPORT, data, jsonpath, {schema,
+        msg: 'Possibly, a new schema.type is being added to OAS 3.0 Spec.',
       });
+      logger.warn(error);
       break;
   }
   return [];

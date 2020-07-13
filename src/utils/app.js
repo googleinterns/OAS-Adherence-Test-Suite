@@ -21,6 +21,7 @@
  * the whole app.
  */
 
+const {JSONPath} = require('jsonpath-plus');
 const fs = require('fs');
 const {logger} = require('../log');
 
@@ -72,6 +73,18 @@ function snakeCase(sentence) {
 }
 
 /**
+ * Checks whether the field of a particular jsonpath has a
+ * overridden/reserved value.
+ * @param {string} jsonpath JSONPath of the Key.
+ * @param {object} [overrides = {}] Keys and their overridden values.
+ * @return {boolean}
+ */
+function overridden(jsonpath, overrides = {}) {
+  // eslint-disable-next-line new-cap
+  return (jsonpath !== '$' && JSONPath(jsonpath, overrides).length > 0);
+}
+
+/**
  * Checks whether the file in the provided path is a valid JSON file.
  * @param {string} path path of JSON file
  * @return {boolean}
@@ -114,11 +127,30 @@ function readFile(path, fileName) {
   }
 }
 
+/**
+ * Builds an error object with necessary details.
+ * @param {string} errorType Classification of Error.(example:'Data Type Error')
+ * @param {*} data
+ * @param {string} jsonpath jsonpath of the data.
+ * @param {object} [additionalErrorDetails = {}] Additional error details.
+ * @return {array<object>}
+ */
+function buildError(errorType, data, jsonpath, additionalErrorDetails = {}) {
+  const errorDetails = {key: jsonpath, value: data};
+  Object.assign(errorDetails, additionalErrorDetails);
+  return [{
+    errorType,
+    errorDetails,
+  }];
+}
+
 module.exports = {
   getRandomNumber,
   getRandomString,
   snakeCase,
+  overridden,
   readFile,
   isValidJSONFile,
   getJSONData,
+  buildError,
 };

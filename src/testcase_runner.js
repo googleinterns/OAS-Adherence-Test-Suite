@@ -168,7 +168,7 @@ function buildTestResults(testCases, responses, expectedStatusCodes,
 
         errors.responseBody =
           errors.responseBody.concat(
-              validateDataAgainstSchema(responseBody, responseBodySchema),
+              validateDataAgainstSchema(responseBody, responseBodySchema, '$'),
           );
 
         if (errors.responseBody.length) testVerdict.final = 'fail';
@@ -184,12 +184,13 @@ function buildTestResults(testCases, responses, expectedStatusCodes,
         const responseSchema = responseSchemas[statusCode];
         const responseHeaderSchema = responseSchema.headers;
         const headers = Object.keys(responseHeaderSchema);
+        // [DEV] This will break, check test/generators/good_data.js
         headers.forEach(function(header) {
           errors.responseHeaders =
               errors.responseHeaders.concat(
                   validateDataAgainstSchema(
                       responseHeaders[header],
-                      responseHeaderSchema[header]));
+                      responseHeaderSchema[header]), '$');
         });
         if (errors.responseHeaders.length) testVerdict.final = 'fail';
       } catch (err) {
