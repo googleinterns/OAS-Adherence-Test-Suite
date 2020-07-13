@@ -30,7 +30,7 @@ const {
 } = require('../generators/test_data');
 const {runTestSuite} = require('../testsuite_runner');
 const {buildConfig, getConfig, upsertConfig} = require('../utils/config');
-const {isValidJSONFile, getJSONData} = require('../utils/app');
+const {readFile} = require('../utils/app');
 const {BaseConfig, prompt} = require('./prompts');
 
 /**
@@ -53,15 +53,9 @@ async function generateTestSuite(options = {}) {
     oasPath = response.oasPath;
   }
 
-  let oasDoc;
-  try {
-    oasDoc = getJSONData(oasPath);
-    oasDoc = await parseOASDoc(oasDoc);
-    logger.verbose('oas document uploaded and parsed successfully.\n'.magenta);
-  } catch (err) {
-    logger.error('oas document upload/parse failed.'.red);
-    return;
-  }
+  let oasDoc = readFile(oasPath, 'OAS 3.0 Document');
+  oasDoc = await parseOASDoc(oasDoc);
+  if (!oasDoc) return;
 
   const title = oasDoc.info.title;
   const version = oasDoc.openapi;
@@ -74,7 +68,13 @@ async function generateTestSuite(options = {}) {
         [{message: 'TestSuite Path'}]);
     testSuitePath = response.path;
   }
-  createTestSuiteFile(oasDoc, testSuitePath);
+
+  const overridesPath = options.overridespath;
+  let overrides = {};
+  if (overridesPath) overrides = readFile(overridesPath, 'Overrides');
+  if (!overrides) return;
+
+  createTestSuiteFile(oasDoc, testSuitePath, overrides);
 }
 
 /**
@@ -92,28 +92,21 @@ async function validateApiEndpoints(options = {}) {
   }
 
   const testSuitePath = options.testsuitepath;
-  let testSuite;
-  if (testSuitePath) {
-    if (isValidJSONFile(testSuitePath)) {
-      testSuite = getJSONData(testSuitePath);
-      logger.verbose('testsuite uploaded successfully.\n'.magenta);
-    } else {
-      logger.error('testsuite Upload Failed.'.red);
-      return;
-    }
-  }
+  let testSuite = readFile(testSuitePath, 'Testsuite');
+  if (!testSuite) return;
+
+  const overridesPath = options.overridespath;
+  let overrides = {};
+  if (overridesPath) overrides = readFile(overridesPath, 'Overrides');
+  if (!overrides) return;
 
   const oasPath = options.oaspath;
   if (oasPath) {
-    if (isValidJSONFile(oasPath)) {
-      const oasDoc = getJSONData(oasPath);
-      logger.verbose('oas 3.0 document uploaded successfully.\n'.magenta);
-      testSuite = buildTestSuite(oasDoc);
-      logger.verbose('testsuite created successfully.\n'.magenta);
-    } else {
-      logger.error('oas 3.0 document upload Failed.'.red);
-      return;
-    }
+    let oasDoc = readFile(oasPath, 'OAS 3.0 Document');
+    oasDoc = await parseOASDoc(oasDoc);
+    if (!oasDoc) return;
+    testSuite = buildTestSuite(oasDoc, overrides);
+    logger.verbose('Testsuite created successfully.\n'.magenta);
   }
 
   let apiEndpoints = options.apiendpoints;

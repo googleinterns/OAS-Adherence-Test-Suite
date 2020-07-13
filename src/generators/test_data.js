@@ -41,12 +41,16 @@ const {
  * Positive testcases include test cases which on execution should get
  * a 2xx http status code from the server.
  * @param {object} schema Schema of request body.
- * @param {object} extras extra keys/fields to be appended to the generated
- *   test case.
- * @return {array<object>} positive testcases
+ * @param {object} extras Extra keys/fields to be appended to the generated
+ *   testcase.
+ * @param {object} overrides Keys/fields of request body and their
+ *  overridden values.
+ * @return {array<object>} Positive testcases.
  */
-function getPostitveTestCaseForRequestBody(schema, extras = {}) {
-  const dataDeficientByOptionalKey = getDataDeficientByOptionalKey(schema);
+function getPostitveTestCaseForRequestBody(
+    schema, extras = {}, overrides = {}) {
+  const dataDeficientByOptionalKey =
+    getDataDeficientByOptionalKey(schema, '$', overrides);
 
   let deficientDatas = [];
   deficientDatas = deficientDatas.concat(dataDeficientByOptionalKey);
@@ -66,16 +70,25 @@ function getPostitveTestCaseForRequestBody(schema, extras = {}) {
  * Negative testcases include test cases which on execution should get
  * a 4xx or 5xx http status code from the server.
  * @param {object} schema Schema of request body.
- * @param {object} extras extra keys/fields to be appended to the generated
- *   test case.
- * @return {array<object>} negative testcases
+ * @param {object} extras Extra keys/fields to be appended to the generated
+ *   testcase.
+ * @param {object} overrides Keys/fields of request body and their
+ *  overridden values.
+ * @return {array<object>} Negative testcases
  */
-function getNegativeTestCaseForRequestBody(schema, extras = {}) {
-  const dataDeficientByDataType = getDataDeficientByDataType(schema);
-  const dataDeficientByEnum = getDataDeficientByEnum(schema);
-  const dataDeficientByNumberLimit = getDataDeficientByNumberLimit(schema);
-  const dataDeficientByRequiredKey = getDataDeficientByRequiredKey(schema);
-  const dataDeficientByStringLength = getDataDeficientByStringLength(schema);
+function getNegativeTestCaseForRequestBody(
+    schema, extras = {}, overrides = {}) {
+  const dataDeficientByDataType = getDataDeficientByDataType(
+      schema, '$', overrides);
+  const dataDeficientByEnum = getDataDeficientByEnum(
+      schema, '$', overrides);
+  const dataDeficientByNumberLimit = getDataDeficientByNumberLimit(
+      schema, '$', {checkMaximum: true, checkMinimum: true}, overrides);
+  const dataDeficientByRequiredKey = getDataDeficientByRequiredKey(
+      schema, '$', overrides);
+  const dataDeficientByStringLength = getDataDeficientByStringLength(
+      schema, '$', {checkMinimumLength: true, checkMaximumLength: true},
+      overrides);
 
   let deficientDatas = [];
   deficientDatas = deficientDatas.concat(dataDeficientByDataType);
@@ -102,18 +115,21 @@ function getNegativeTestCaseForRequestBody(schema, extras = {}) {
  * Example: query params, path params, header params, cookie params.<br>
  * The scope of the functionality is limited to only header parameters.
  * @param {object} parameters Parameter List.
- * @param {object} extras extra keys/fields to be appended to the generated
+ * @param {object} extras Extra keys/fields to be appended to the generated
  *   test case.
- * @return {array<object>} positive testcases
+ * @param {object} overrides Keys/fields of request headers and their
+ *  overridden values.
+ * @return {array<object>} Positive testcases
  */
-function getPostitveTestCaseForRequestHeader(parameters, extras = {}) {
+function getPostitveTestCaseForRequestHeader(
+    parameters, extras = {}, overrides = {}) {
   let deficientDatasOfAllHeaders = [];
   parameters = parameters || [];
   parameters.forEach(function(parameter) {
     if (parameter.in !== 'header') return;
 
-    const dataDeficientByOptionalKey =
-      getDataDeficientByOptionalKey(parameter.schema);
+    const dataDeficientByOptionalKey = getDataDeficientByOptionalKey(
+        parameter.schema, '$', overrides[parameter.name]);
 
     let deficientDatas = [];
     deficientDatas = deficientDatas.concat(dataDeficientByOptionalKey);
@@ -128,7 +144,7 @@ function getPostitveTestCaseForRequestHeader(parameters, extras = {}) {
       under test.
     */
     deficientDatas.forEach(function(deficientData) {
-      const exampleRequestHeader = getMockHeaders(parameters);
+      const exampleRequestHeader = getMockHeaders(parameters, overrides);
       const deficientRequestHeader = exampleRequestHeader;
       deficientRequestHeader[parameter.name] = deficientData.data;
       deficientData.data = deficientRequestHeader;
@@ -137,7 +153,7 @@ function getPostitveTestCaseForRequestHeader(parameters, extras = {}) {
 
     /* Testcase for "missing optional header". */
     if (parameter.required !== true) {
-      const exampleRequestHeader = getMockHeaders(parameters);
+      const exampleRequestHeader = getMockHeaders(parameters, overrides);
       const deficientRequestHeader = exampleRequestHeader;
       delete deficientRequestHeader[parameter.name];
 
@@ -168,26 +184,31 @@ function getPostitveTestCaseForRequestHeader(parameters, extras = {}) {
  * Example: query params, path params, header params, cookie params.<br>
  * The scope of the functionality is limited to only header parameters.
  * @param {object} parameters Parameter List.
- * @param {object} extras extra keys/fields to be appended to the generated
+ * @param {object} extras Extra keys/fields to be appended to the generated
  *   test case.
- * @return {array<object>} negative testcases
+ * @param {object} overrides Keys and their overridden values.
+ * @return {array<object>} Negative testcases.
  */
-function getNegativeTestCaseForRequestHeader(parameters, extras = {}) {
+function getNegativeTestCaseForRequestHeader(
+    parameters, extras = {}, overrides = {}) {
   let deficientDatasOfAllHeaders = [];
   parameters = parameters || [];
   parameters.forEach(function(parameter) {
     if (parameter.in !== 'header') return;
 
-    const dataDeficientByDataType =
-      getDataDeficientByDataType(parameter.schema);
-    const dataDeficientByEnum =
-      getDataDeficientByEnum(parameter.schema);
-    const dataDeficientByNumberLimit =
-      getDataDeficientByNumberLimit(parameter.schema);
-    const dataDeficientByRequiredKey =
-      getDataDeficientByRequiredKey(parameter.schema);
-    const dataDeficientByStringLength =
-      getDataDeficientByStringLength(parameter.schema);
+    const dataDeficientByDataType = getDataDeficientByDataType(
+        parameter.schema, '$', overrides[parameter.name]);
+    const dataDeficientByEnum = getDataDeficientByEnum(
+        parameter.schema, '$', overrides[parameter.name]);
+    const dataDeficientByRequiredKey = getDataDeficientByRequiredKey(
+        parameter.schema, '$', overrides[parameter.name]);
+    const dataDeficientByNumberLimit = getDataDeficientByNumberLimit(
+        parameter.schema, '$', {checkMaximum: true, checkMinimum: true},
+        overrides[parameter.name]);
+    const dataDeficientByStringLength = getDataDeficientByStringLength(
+        parameter.schema, '$',
+        {checkMaximumLength: true, checkMinimumLength: true},
+        overrides[parameter.name]);
 
     let deficientDatas = [];
     deficientDatas = deficientDatas.concat(dataDeficientByDataType);
@@ -206,7 +227,7 @@ function getNegativeTestCaseForRequestHeader(parameters, extras = {}) {
       under test.
     */
     deficientDatas.forEach(function(deficientData) {
-      const exampleRequestHeader = getMockHeaders(parameters);
+      const exampleRequestHeader = getMockHeaders(parameters, overrides);
       const deficientRequestHeader = exampleRequestHeader;
       deficientRequestHeader[parameter.name] = deficientData.data;
       deficientData.data = deficientRequestHeader;
@@ -215,7 +236,7 @@ function getNegativeTestCaseForRequestHeader(parameters, extras = {}) {
 
     /* Testcase for "missing required header". */
     if (parameter.required === true) {
-      const exampleRequestHeader = getMockHeaders(parameters);
+      const exampleRequestHeader = getMockHeaders(parameters, overrides);
       const deficientRequestHeader = exampleRequestHeader;
       delete deficientRequestHeader[parameter.name];
 
@@ -241,9 +262,10 @@ function getNegativeTestCaseForRequestHeader(parameters, extras = {}) {
 /**
  * Generates testsuite for the oasDoc provided.
  * @param {object} oasDoc OAS 3.0 Document.
+ * @param {object} overrides Keys and their overridden values.
  * @return {object} testSuite
  */
-function buildTestSuite(oasDoc) {
+function buildTestSuite(oasDoc, overrides) {
   const testSuite = {};
   testSuite.createdAtTimeStamp = new Date();
 
@@ -278,30 +300,31 @@ function buildTestSuite(oasDoc) {
     const requestBodySchema =
       apiSchema.requestBody.content['application/json'].schema;
     const parameters = apiSchema.parameters;
+
+    const apiEndpointOverrides = (overrides[path] || {})[httpMethod] || {};
+    const requestBodyOverrides = apiEndpointOverrides.requestBody || {};
+    const requestHeaderOverrides = apiEndpointOverrides.requestHeaders || {};
+
     apiTestSuite.examples = {
-      requestBody: getMockData(requestBodySchema),
-      requestHeader: getMockHeaders(parameters),
+      requestBody: getMockData(requestBodySchema, '$', requestBodyOverrides),
+      requestHeader: getMockHeaders(parameters, requestHeaderOverrides),
     };
 
     let positiveTestCases = [];
-    positiveTestCases = positiveTestCases.concat(
-        getPostitveTestCaseForRequestBody(
-            requestBodySchema,
-            {testForRequestBody: true}));
-    positiveTestCases = positiveTestCases.concat(
-        getPostitveTestCaseForRequestHeader(
-            parameters,
-            {testForRequestHeader: true}));
+    positiveTestCases =
+      positiveTestCases.concat(getPostitveTestCaseForRequestBody(
+          requestBodySchema, {testForRequestBody: true}, requestBodyOverrides));
+    positiveTestCases =
+      positiveTestCases.concat(getPostitveTestCaseForRequestHeader(
+          parameters, {testForRequestHeader: true}, requestHeaderOverrides));
 
     let negativeTestCases = [];
-    negativeTestCases = negativeTestCases.concat(
-        getNegativeTestCaseForRequestBody(
-            requestBodySchema,
-            {testForRequestBody: true}));
-    negativeTestCases = negativeTestCases.concat(
-        getNegativeTestCaseForRequestHeader(
-            parameters,
-            {testForRequestHeader: true}));
+    negativeTestCases =
+      negativeTestCases.concat(getNegativeTestCaseForRequestBody(
+          requestBodySchema, {testForRequestBody: true}, requestBodyOverrides));
+    negativeTestCases =
+      negativeTestCases.concat(getNegativeTestCaseForRequestHeader(
+          parameters, {testForRequestHeader: true}, requestHeaderOverrides));
 
     apiTestSuite.testCases = {
       positiveTestCases,
@@ -320,9 +343,10 @@ function buildTestSuite(oasDoc) {
  * output location specified by user.
  * @param {object} oasDoc oas 3.0 document.
  * @param {string} testSuitePath path where the generated testsuite is saved
+ * @param {object} overrides Keys and their overridden values.
  */
-function createTestSuiteFile(oasDoc, testSuitePath) {
-  let testSuite = buildTestSuite(oasDoc);
+function createTestSuiteFile(oasDoc, testSuitePath, overrides) {
+  let testSuite = buildTestSuite(oasDoc, overrides);
   testSuite = JSON.stringify(testSuite);
   try {
     fs.writeFileSync(testSuitePath, testSuite);

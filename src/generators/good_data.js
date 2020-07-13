@@ -1,3 +1,4 @@
+/* eslint-disable new-cap */
 /**
  * Copyright 2020 Google LLC
  *
@@ -24,17 +25,31 @@ const RandExp = require('randexp');
 const faker = require('faker');
 const {logger} = require('../log');
 const {SchemaFormat, DataType} = require('../constants');
-const {
-  getRandomNumber,
-  getRandomString,
-} = require('../utils/app');
+const {JSONPath} = require('jsonpath-plus');
+const {getRandomNumber, getRandomString} = require('../utils/app');
+
+/**
+ * Checks whether a field has a overridden/reserved value.
+ * @param {string} jsonpath jsonpath of the Key/field.
+ * @param {object} overrides Keys and their overridden values.
+ * @return {boolean}
+ */
+function overridden(jsonpath, overrides) {
+  // eslint-disable-next-line new-cap
+  return (jsonpath !== '$' && JSONPath(jsonpath, overrides).length > 0);
+}
 
 /**
  * Generates a random integer that complies with schema.
  * @param {object} schema Specification of Integer.
+ * @param {string} jsonpath jsonpath of the Integer Field.
+ * @param {object} overrides Overridden Keys/fields with their values.
  * @return {number} Random Integer.
  */
-function getMockInteger(schema) {
+function getMockInteger(schema, jsonpath, overrides = {}) {
+  if (overridden(jsonpath, overrides)) {
+    return JSONPath(jsonpath, overrides)[0];
+  }
   const low = schema.minimum;
   const high = schema.maximum;
   return getRandomNumber(low, high, {returnInteger: true});
@@ -43,9 +58,14 @@ function getMockInteger(schema) {
 /**
  * Generates a random number(interger/decimal values) that complies with schema.
  * @param {object} schema Specification of Number.
+ * @param {string} jsonpath jsonpath of the Number Field.
+ * @param {object} overrides Overridden Keys/fields with their values.
  * @return {number} Random Number.
  */
-function getMockNumber(schema) {
+function getMockNumber(schema, jsonpath, overrides = {}) {
+  if (overridden(jsonpath, overrides)) {
+    return JSONPath(jsonpath, overrides)[0];
+  }
   const low = schema.minimum;
   const high = schema.maximum;
   return getRandomNumber(low, high);
@@ -64,10 +84,14 @@ function getMockNumber(schema) {
  *    a string of 'email' format as schema.format has higher priority than
  *    schema.minLength.
  * @param {object} schema Specification of String.
- * @param {string} identifier Name of the String.
+ * @param {string} jsonpath jsonpath of the String Field.
+ * @param {object} overrides Overridden Keys/fields with their values.
  * @return {string} Random String.
  */
-function getMockString(schema, identifier) {
+function getMockString(schema, jsonpath, overrides = {}) {
+  if (overridden(jsonpath, overrides)) {
+    return JSONPath(jsonpath, overrides)[0];
+  }
   if (schema.format) {
     switch (schema.format) {
       case SchemaFormat.EMAIL: {
@@ -94,7 +118,7 @@ function getMockString(schema, identifier) {
         const errorInfo = {
           errorType: 'Limited Support Error',
           errorDetails: {
-            key: identifier,
+            key: jsonpath,
             format: schema.format,
             supportedFormats: 'email, uuid, uri, ipv4/ipv6',
           },
@@ -126,14 +150,18 @@ function getMockString(schema, identifier) {
 /**
  * Generates a random array with items that complies with schema.
  * @param {object} schema Specification of Array.
- * @param {string} identifier Name of the Array.
+ * @param {string} jsonpath jsonpath of the Array Field.
+ * @param {object} overrides Overridden Keys/fields with their values.
  * @return {array} Random Array.
  */
-function getMockArray(schema, identifier) {
+function getMockArray(schema, jsonpath, overrides = {}) {
+  if (overridden(jsonpath, overrides)) {
+    return JSONPath(jsonpath, overrides)[0];
+  }
   const mockArray = [];
   const lengthOfMockArray = getRandomNumber(1, 10, {returnInteger: true});
   for (let index = 0; index < lengthOfMockArray; index++) {
-    mockArray.push(getMockData(schema.items, identifier));
+    mockArray.push(getMockData(schema.items, jsonpath, overrides));
   }
   return mockArray;
 }
@@ -141,16 +169,20 @@ function getMockArray(schema, identifier) {
 /**
  * Generates a random object that complies with schema.
  * @param {object} schema Specification of Object.
- * @param {string} [identifier = '$'] Name of the Object.
+ * @param {string} jsonpath jsonpath of the Object.
+ * @param {object} overrides Overridden Keys/fields with their values.
  * @return {object} Random Object.
  */
-function getMockObject(schema, identifier = '$') {
+function getMockObject(schema, jsonpath, overrides = {}) {
+  if (overridden(jsonpath, overrides)) {
+    return JSONPath(jsonpath, overrides)[0];
+  }
   const mockObject = {};
   const keys = Object.keys(schema.properties);
   keys.forEach(function(key) {
     const keySchema = schema.properties[key];
     mockObject[key] =
-      getMockData(keySchema, identifier + '.' + key);
+      getMockData(keySchema, `${jsonpath}.${key}`, overrides);
   });
   return mockObject;
 }
@@ -159,16 +191,21 @@ function getMockObject(schema, identifier = '$') {
  * Generates a random data that complies with schema.<br>
  * Use case: generating random requestbody which complies with schema.
  * @param {object} schema Specification of data.
- * @param {string} [identifier = '$'] Name of the Data.
+ * @param {string} jsonpath jsonpath of the Field/Key.
+ * @param {object} overrides Overridden Keys/fields with their values.
  * @return {object} Random Object.
  */
-function getMockData(schema, identifier = '$') {
+function getMockData(schema, jsonpath, overrides = {}) {
   if (!schema) return undefined;
+
+  if (overridden(jsonpath, overrides)) {
+    return JSONPath(jsonpath, overrides)[0];
+  }
 
   if (schema.oneOf) {
     const schemas = schema.oneOf;
-    return getMockData(
-        schemas[Math.floor(Math.random() * schemas.length)], identifier);
+    return getMockData(schemas[Math.floor(Math.random() * schemas.length)],
+        jsonpath, overrides);
   }
 
   if (schema.enum) {
@@ -180,15 +217,15 @@ function getMockData(schema, identifier = '$') {
     case DataType.BOOLEAN:
       return [true, false][Math.floor(Math.random() * 2)];
     case DataType.INTEGER:
-      return getMockInteger(schema);
+      return getMockInteger(schema, jsonpath, overrides);
     case DataType.NUMBER:
-      return getMockNumber(schema);
+      return getMockNumber(schema, jsonpath, overrides);
     case DataType.STRING:
-      return getMockString(schema, identifier);
+      return getMockString(schema, jsonpath, overrides);
     case DataType.ARRAY:
-      return getMockArray(schema, identifier);
+      return getMockArray(schema, jsonpath, overrides);
     case DataType.OBJECT:
-      return getMockObject(schema, identifier);
+      return getMockObject(schema, jsonpath, overrides);
     default:
       logger['error'](`No support for ${schema.type}`);
       return null;
@@ -201,14 +238,17 @@ function getMockData(schema, identifier = '$') {
  * Example: query params, path params, header params, cookie params.<br>
  * The scope of the functionality is limited to generating only header params.
  * @param {array} parameters Parameter List.
+ * @param {object} overrides Keys/fields of request headers and their
+ *  overridden values.
  * @return {object} Mock Headers.
  */
-function getMockHeaders(parameters) {
+function getMockHeaders(parameters, overrides = {}) {
   const mockHeaders = {};
   parameters = parameters || [];
   parameters.forEach(function(parameter) {
     if (parameter.in === 'header') {
-      mockHeaders[parameter['name']] = getMockData(parameter['schema']);
+      mockHeaders[parameter.name] = getMockData(parameter.schema,
+          `$.${parameter.name}`, overrides);
     }
   });
   return mockHeaders;

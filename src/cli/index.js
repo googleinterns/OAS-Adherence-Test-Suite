@@ -40,6 +40,7 @@ program
         '--testsuitepath <testsuitepath>',
         'path where the generated testsuite is saved',
     )
+    .option('--overridespath <overridespath>', 'Path of Overrides file')
     .option('--verbose', `logs above and equal to 'verbose' level are logged`)
     .action(generateTestSuite);
 
@@ -51,6 +52,7 @@ program
         'testsuite file will be uploaded from testsuitepath',
     )
     .option('--oaspath <oaspath>', 'oas document path')
+    .option('--overridespath <overridespath>', 'Path of Overrides file')
     .option('--baseURL <baseURL>', 'baseURL of the api endpoints')
     .option(
         '--apiendpoints <apiendpoints>',
