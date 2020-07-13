@@ -30,26 +30,8 @@ const {
 } = require('../generators/test_data');
 const {runTestSuite} = require('../testsuite_runner');
 const {buildConfig, getConfig, upsertConfig} = require('../utils/config');
-const {isValidJSONFile, getJSONData} = require('../utils/app');
+const {readFile} = require('../utils/app');
 const {BaseConfig, prompt} = require('./prompts');
-
-/**
- * Reads data from a file present in the provided path.
- * @param {string} path Path of the file/document.
- * @param {string} fileName Name of the file/document.
- * @return {object} file
- */
-function readFile(path, fileName) {
-  if (isValidJSONFile(path)) {
-    const file = getJSONData(path);
-    logger.verbose(
-        `Uploaded ${fileName} successfully from ${path}.\n`.magenta);
-    return file;
-  } else {
-    logger.error(`${fileName} upload failed.`.red);
-    return null;
-  }
-}
 
 /**
  * generates testsuite and creates a testSuite file in the path specified

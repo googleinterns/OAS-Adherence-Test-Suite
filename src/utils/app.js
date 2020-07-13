@@ -22,6 +22,7 @@
  */
 
 const fs = require('fs');
+const {logger} = require('../log');
 
 /**
  * Generates and returns a random number(integer/float) within the limits set.
@@ -95,10 +96,29 @@ function getJSONData(path) {
   return JSON.parse(jsonObject);
 }
 
+/**
+ * Reads data from a file present in the provided path.
+ * @param {string} path Path of the file/document.
+ * @param {string} fileName Name of the file/document.
+ * @return {object} file
+ */
+function readFile(path, fileName) {
+  if (isValidJSONFile(path)) {
+    const file = getJSONData(path);
+    logger.verbose(
+        `Uploaded ${fileName} successfully from ${path}.\n`.magenta);
+    return file;
+  } else {
+    logger.error(`${fileName} upload failed.`.red);
+    return null;
+  }
+}
+
 module.exports = {
   getRandomNumber,
   getRandomString,
   snakeCase,
+  readFile,
   isValidJSONFile,
   getJSONData,
 };
