@@ -137,7 +137,7 @@ async function runTestSuite() {
         the user after the completion of testing and displaying the test results
       */
       logger.verbose('Skipping response body/headers validation because their' +
-      'schemas are not present in the oas document provided.');
+      ' schemas are not present in the oas document provided.');
 
       displayTestSummary();
       const endTime = performance.now();

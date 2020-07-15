@@ -129,7 +129,7 @@ function getPostitveTestCaseForRequestHeader(
     if (parameter.in !== 'header') return;
 
     const dataDeficientByOptionalKey = getDataDeficientByOptionalKey(
-        parameter.schema, '$', overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides);
 
     let deficientDatas = [];
     deficientDatas = deficientDatas.concat(dataDeficientByOptionalKey);
@@ -197,17 +197,16 @@ function getNegativeTestCaseForRequestHeader(
     if (parameter.in !== 'header') return;
 
     const dataDeficientByDataType = getDataDeficientByDataType(
-        parameter.schema, '$', overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides);
     const dataDeficientByEnum = getDataDeficientByEnum(
-        parameter.schema, '$', overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides);
     const dataDeficientByRequiredKey = getDataDeficientByRequiredKey(
-        parameter.schema, '$', overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides);
     const dataDeficientByNumberLimit = getDataDeficientByNumberLimit(
-        parameter.schema, '$', overrides[parameter.name],
+        parameter.schema, `$.${parameter.name}`, overrides,
         {checkMaximum: true, checkMinimum: true});
     const dataDeficientByStringLength = getDataDeficientByStringLength(
-        parameter.schema, '$',
-        overrides[parameter.name],
+        parameter.schema, `$.${parameter.name}`, overrides,
         {checkMaximumLength: true, checkMinimumLength: true});
 
     let deficientDatas = [];
@@ -309,6 +308,13 @@ function buildTestSuite(oasDoc, overrides = {}) {
     };
 
     let positiveTestCases = [];
+    /*
+      An empty testcase corresponds to the testcase where both requestheader,
+      requestbody are equal to the example requestheader, example requestbody
+      respectively. Since, the example requestheader, example requestbody are
+      optimal, the testcase expects a success http status code on execution.
+    */
+    positiveTestCases.push({});
     positiveTestCases =
       positiveTestCases.concat(getPostitveTestCaseForRequestBody(
           requestBodySchema, {testForRequestBody: true}, requestBodyOverrides));

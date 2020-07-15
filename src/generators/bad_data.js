@@ -129,7 +129,7 @@ function getDeficientObjects(schema, jsonpath, deficientDataGenerator,
  * @return {array<object>} deficientData
  */
 function getDataDeficientByDataType(schema, jsonpath, overrides = {}) {
-  if (!schema || overridden(jsonpath, overrides)) return [];
+  if (!schema) return [];
   if (schema.oneOf) {
     return getOneOfDeficientData(schema.oneOf, jsonpath,
         getDataDeficientByDataType, overrides);
@@ -143,13 +143,17 @@ function getDataDeficientByDataType(schema, jsonpath, overrides = {}) {
     deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
         getDataDeficientByDataType, overrides));
   }
+  if (overridden(jsonpath, overrides)) return deficientDatas;
+
   DUMMY.forEach(function(dummy) {
     if (dummy.type === schema.type) return;
     /*
       Skip the below cases, as it doesn't bring any deficiency in data.
-      1) (integer vs number) Number can have both integer/decimal value.
+      1) (number vs integer) Number can have both integer/decimal value.
       2) (string vs integer/decimal/boolean) String can have values of
       integer/decimal/boolean datatype.
+      3) (object vs array) Because array is a special variation of object
+      datatype.
     */
     if (dummy.type === DataType.INTEGER &&
       schema.type === DataType.NUMBER) return;
@@ -158,6 +162,9 @@ function getDataDeficientByDataType(schema, jsonpath, overrides = {}) {
         dummy.type === DataType.NUMBER ||
         dummy.type === DataType.BOOLEAN) &&
         schema.type === DataType.STRING) return;
+
+    if (dummy.type === DataType.ARRAY &&
+      schema.type === DataType.OBJECT) return;
 
     deficientDatas.push({
       key: jsonpath,
@@ -178,7 +185,7 @@ function getDataDeficientByDataType(schema, jsonpath, overrides = {}) {
  * @return {array<object>} deficientData
  */
 function getDataDeficientByEnum(schema, jsonpath, overrides = {}) {
-  if (!schema || overridden(jsonpath, overrides)) return [];
+  if (!schema) return [];
   if (schema.oneOf) {
     return getOneOfDeficientData(schema.oneOf, jsonpath,
         getDataDeficientByEnum, overrides);
@@ -192,6 +199,8 @@ function getDataDeficientByEnum(schema, jsonpath, overrides = {}) {
     deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
         getDataDeficientByEnum, overrides));
   }
+  if (overridden(jsonpath, overrides)) return deficientDatas;
+
   if (schema.enum) {
     DUMMY.forEach(function(dummy) {
       if (dummy.type === schema.type) {
@@ -221,7 +230,7 @@ function getDataDeficientByEnum(schema, jsonpath, overrides = {}) {
  */
 function getDataDeficientByNumberLimit(schema, jsonpath, overrides = {},
     options = {}) {
-  if (!schema || overridden(jsonpath, overrides)) return [];
+  if (!schema) return [];
   if (schema.oneOf) {
     return getOneOfDeficientData(schema.oneOf, jsonpath,
         getDataDeficientByNumberLimit, overrides, options);
@@ -235,6 +244,7 @@ function getDataDeficientByNumberLimit(schema, jsonpath, overrides = {},
     deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
         getDataDeficientByNumberLimit, overrides, options));
   }
+  if (overridden(jsonpath, overrides)) return deficientDatas;
 
   if (schema.type === DataType.NUMBER || schema.type === DataType.INTEGER) {
     const deficientData = [];
@@ -265,7 +275,7 @@ function getDataDeficientByNumberLimit(schema, jsonpath, overrides = {},
  * @return {array<object>} deficientData
  */
 function getDataDeficientByOptionalKey(schema, jsonpath, overrides = {}) {
-  if (!schema || overridden(jsonpath, overrides)) return [];
+  if (!schema) return [];
   if (schema.oneOf) {
     return getOneOfDeficientData(schema.oneOf, jsonpath,
         getDataDeficientByOptionalKey, overrides);
@@ -276,12 +286,13 @@ function getDataDeficientByOptionalKey(schema, jsonpath, overrides = {}) {
         getDataDeficientByOptionalKey, overrides));
   }
   if (schema.type === DataType.OBJECT) {
-    deficientDatas = deficientDatas.concat(
-        getDeficientObjects(schema, jsonpath, getDataDeficientByOptionalKey));
+    deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
+        getDataDeficientByOptionalKey, overrides));
     const keys = Object.keys(schema.properties);
     const requiredKeys = schema.required || [];
     keys.forEach(function(key) {
-      if (!requiredKeys.includes(key)) {
+      if (!requiredKeys.includes(key) &&
+          !overridden(`${jsonpath}.${key}`, overrides)) {
         const data = getMockData(schema, jsonpath, overrides);
         delete data[key];
         deficientDatas.push({
@@ -302,7 +313,7 @@ function getDataDeficientByOptionalKey(schema, jsonpath, overrides = {}) {
  * @return {array<object>} deficientData
  */
 function getDataDeficientByRequiredKey(schema, jsonpath, overrides = {}) {
-  if (!schema || overridden(jsonpath, overrides)) return [];
+  if (!schema) return [];
   if (schema.oneOf) {
     return getOneOfDeficientData(schema.oneOf, jsonpath,
         getDataDeficientByRequiredKey, overrides);
@@ -313,12 +324,13 @@ function getDataDeficientByRequiredKey(schema, jsonpath, overrides = {}) {
         getDataDeficientByRequiredKey, overrides));
   }
   if (schema.type === DataType.OBJECT) {
-    deficientDatas = deficientDatas.concat(
-        getDeficientObjects(schema, jsonpath, getDataDeficientByRequiredKey));
+    deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
+        getDataDeficientByRequiredKey, overrides));
     const keys = Object.keys(schema.properties);
     const requiredKeys = schema.required || [];
     keys.forEach(function(key) {
-      if (requiredKeys.includes(key)) {
+      if (requiredKeys.includes(key) &&
+          !overridden(`${jsonpath}.${key}`, overrides)) {
         const data = getMockData(schema, jsonpath, overrides);
         delete data[key];
         deficientDatas.push({
@@ -346,7 +358,7 @@ function getDataDeficientByRequiredKey(schema, jsonpath, overrides = {}) {
  */
 function getDataDeficientByStringLength(schema, jsonpath, overrides = {},
     options = {}) {
-  if (!schema || overridden(jsonpath, overrides)) return [];
+  if (!schema) return [];
   if (schema.oneOf) {
     return getOneOfDeficientData(schema.oneOf, jsonpath,
         getDataDeficientByStringLength, overrides, options);
@@ -360,6 +372,7 @@ function getDataDeficientByStringLength(schema, jsonpath, overrides = {},
     deficientDatas = deficientDatas.concat(getDeficientObjects(schema, jsonpath,
         getDataDeficientByStringLength, overrides, options));
   }
+  if (overridden(jsonpath, overrides)) return deficientDatas;
 
   if (schema.type === DataType.STRING) {
     if (options.checkMinimumLength && schema.minLength) {
