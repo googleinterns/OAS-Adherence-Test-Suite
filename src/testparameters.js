@@ -159,6 +159,7 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
   });
   const requiredApiKeys = getApiKeyList(testParams.apiEndpointsToTest, oasDoc);
   for (const requiredApiKeyName of requiredApiKeys) {
+    if (apiKeysObject[requiredApiKeyName]) continue;
     const response = await prompt([BaseConfig.apiKey],
         [{message: `[API Key] ${requiredApiKeyName}`}]);
     apiKeysObject[requiredApiKeyName] = response.apiKeyValue;

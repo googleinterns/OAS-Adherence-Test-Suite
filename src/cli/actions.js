@@ -92,8 +92,8 @@ async function validateApiEndpoints(options = {}) {
   }
 
   const testSuitePath = options.testsuitepath;
-  let testSuite = readFile(testSuitePath, 'Testsuite');
-  if (!testSuite) return;
+  let testSuite = {};
+  if (testSuitePath) testSuite = readFile(testSuitePath, 'Testsuite');
 
   const overridesPath = options.overridespath;
   let overrides = {};

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/** @module datagen/test_datagen */
+/** @module generators/test_data */
 /**
  * @fileoverview Contains functions that help in generating testCases for
  * validation of request header, request body and security requirements of an
@@ -83,12 +83,12 @@ function getNegativeTestCaseForRequestBody(
   const dataDeficientByEnum = getDataDeficientByEnum(
       schema, '$', overrides);
   const dataDeficientByNumberLimit = getDataDeficientByNumberLimit(
-      schema, '$', {checkMaximum: true, checkMinimum: true}, overrides);
+      schema, '$', overrides, {checkMaximum: true, checkMinimum: true});
   const dataDeficientByRequiredKey = getDataDeficientByRequiredKey(
       schema, '$', overrides);
   const dataDeficientByStringLength = getDataDeficientByStringLength(
-      schema, '$', {checkMinimumLength: true, checkMaximumLength: true},
-      overrides);
+      schema, '$', overrides,
+      {checkMinimumLength: true, checkMaximumLength: true});
 
   let deficientDatas = [];
   deficientDatas = deficientDatas.concat(dataDeficientByDataType);
@@ -129,7 +129,7 @@ function getPostitveTestCaseForRequestHeader(
     if (parameter.in !== 'header') return;
 
     const dataDeficientByOptionalKey = getDataDeficientByOptionalKey(
-        parameter.schema, '$', overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides);
 
     let deficientDatas = [];
     deficientDatas = deficientDatas.concat(dataDeficientByOptionalKey);
@@ -197,18 +197,17 @@ function getNegativeTestCaseForRequestHeader(
     if (parameter.in !== 'header') return;
 
     const dataDeficientByDataType = getDataDeficientByDataType(
-        parameter.schema, '$', overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides);
     const dataDeficientByEnum = getDataDeficientByEnum(
-        parameter.schema, '$', overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides);
     const dataDeficientByRequiredKey = getDataDeficientByRequiredKey(
-        parameter.schema, '$', overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides);
     const dataDeficientByNumberLimit = getDataDeficientByNumberLimit(
-        parameter.schema, '$', {checkMaximum: true, checkMinimum: true},
-        overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides,
+        {checkMaximum: true, checkMinimum: true});
     const dataDeficientByStringLength = getDataDeficientByStringLength(
-        parameter.schema, '$',
-        {checkMaximumLength: true, checkMinimumLength: true},
-        overrides[parameter.name]);
+        parameter.schema, `$.${parameter.name}`, overrides,
+        {checkMaximumLength: true, checkMinimumLength: true});
 
     let deficientDatas = [];
     deficientDatas = deficientDatas.concat(dataDeficientByDataType);
@@ -265,7 +264,7 @@ function getNegativeTestCaseForRequestHeader(
  * @param {object} overrides Keys and their overridden values.
  * @return {object} testSuite
  */
-function buildTestSuite(oasDoc, overrides) {
+function buildTestSuite(oasDoc, overrides = {}) {
   const testSuite = {};
   testSuite.createdAtTimeStamp = new Date();
 
@@ -282,8 +281,6 @@ function buildTestSuite(oasDoc, overrides) {
   let apiTestSuites = [];
 
   apiEndpoints.forEach(function({path, httpMethod}) {
-    logger.verbose(`Creating apiTestSuite for ${httpMethod} ${path}`);
-
     const apiSchema = oasDoc.paths[path][httpMethod];
     const apiTestSuite = {};
     apiTestSuite.apiEndpoint = {
@@ -311,6 +308,13 @@ function buildTestSuite(oasDoc, overrides) {
     };
 
     let positiveTestCases = [];
+    /*
+      An empty testcase corresponds to the testcase where both requestheader,
+      requestbody are equal to the example requestheader, example requestbody
+      respectively. Since, the example requestheader, example requestbody are
+      optimal, the testcase expects a success http status code on execution.
+    */
+    positiveTestCases.push({});
     positiveTestCases =
       positiveTestCases.concat(getPostitveTestCaseForRequestBody(
           requestBodySchema, {testForRequestBody: true}, requestBodyOverrides));

@@ -34,6 +34,8 @@ const axios = require('axios');
   the responses even for the rejected promises we set 'validateStatus' to 'null'
 */
 axios.defaults.validateStatus = null;
+axios.defaults.headers.post['Content-Type'] =
+  'application/json';
 
 const axiosRetry = require('axios-retry');
 axiosRetry(axios, {retries: 3, retryCondition: function(err) {
@@ -142,7 +144,7 @@ function buildTestResults(testCases, responses, expectedStatusCodes,
 
     testVerdict.initial = expectedStatusCodes.some(
         function(expectedStatusCode) {
-          return (statusCode/100 == expectedStatusCode[0]);
+          return (Math.trunc(statusCode/100) == expectedStatusCode[0][0]);
         }) ? 'pass': 'fail';
 
 
@@ -166,10 +168,8 @@ function buildTestResults(testCases, responses, expectedStatusCodes,
         const responseBodySchema =
           responseSchema.content['application/json'].schema;
 
-        errors.responseBody =
-          errors.responseBody.concat(
-              validateDataAgainstSchema(responseBody, responseBodySchema),
-          );
+        errors.responseBody = errors.responseBody.concat(
+            validateDataAgainstSchema(responseBody, responseBodySchema, '$'));
 
         if (errors.responseBody.length) testVerdict.final = 'fail';
       } catch (err) {
@@ -184,12 +184,11 @@ function buildTestResults(testCases, responses, expectedStatusCodes,
         const responseSchema = responseSchemas[statusCode];
         const responseHeaderSchema = responseSchema.headers;
         const headers = Object.keys(responseHeaderSchema);
+
         headers.forEach(function(header) {
-          errors.responseHeaders =
-              errors.responseHeaders.concat(
-                  validateDataAgainstSchema(
-                      responseHeaders[header],
-                      responseHeaderSchema[header]));
+          errors.responseHeaders = errors.responseHeaders.concat(
+              validateDataAgainstSchema(responseHeaders[header],
+                  responseHeaderSchema[header]), '$');
         });
         if (errors.responseHeaders.length) testVerdict.final = 'fail';
       } catch (err) {
@@ -230,26 +229,24 @@ async function runTestCase(testCases, expectedStatusCodes,
     httpMethod,
   } = apiEndpoint;
   const exampleRequestBody = apiTestSuite.examples.requestBody;
-  const exampleRequestHeaders = apiTestSuite.examples.requestHeaders;
+  const exampleRequestHeaders = apiTestSuite.examples.requestHeader;
   const responseSchemas = oasDoc.paths[path][httpMethod].responses;
 
   const requestPromises = [];
   for (const testCase of testCases) {
-    let requestBody;
-    let requestHeaders;
-    if (testCase.testForRequestBody) {
-      requestBody = testCase.data;
-      requestHeaders = exampleRequestHeaders;
-    } else if (testCase.testForRequestHeaders) {
-      requestHeaders = testCase.data;
-      requestBody = exampleRequestBody;
-    }
+    const requestBody =
+      (testCase.testForRequestBody) ? testCase.data : exampleRequestBody;
+    const requestHeaders =
+      (testCase.testForRequestHeader) ? testCase.data: exampleRequestHeaders;
+    // API Keys are sent along with the request headers.
+    Object.assign(requestHeaders, axiosConfig.apiKeys);
     requestPromises.push(axios({
       url: apiEndpoint.path,
       baseURL: axiosConfig.baseURL,
       method: httpMethod,
       headers: requestHeaders,
       data: requestBody,
+      auth: axiosConfig.basicAuth || {},
       timeout: axiosConfig.timeout || 5000,
     }));
   }

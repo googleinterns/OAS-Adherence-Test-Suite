@@ -1,9 +1,24 @@
+/**
+ * Copyright 2020 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 /* eslint-disable no-undef */
 const chai = require('chai');
 const assert = chai.assert;
-const oasDoc = require('../../examples/oas/simple_oas3.json');
-const forgedOASDoc = require('../../examples/oas/forged_oas3.json');
-const schema = require('../../examples/schemas/simpleschema.json');
+const oasDoc = require('../../examples/oas_doc.json');
+const {Schemas} = require('../../examples/schemas');
+// const parameters = require('../../examples/schemas/parameters.json');
 const {
   buildTestSuite,
   createTestSuiteFile,
@@ -11,10 +26,9 @@ const {
   getNegativeTestCaseForRequestHeader,
   getPostitveTestCaseForRequestBody,
   getNegativeTestCaseForRequestBody,
-} = require('../../src/datagen/test_datagen');
-const parameters = require('../../examples/schemas/parameters.json');
+} = require('../../src/generators/test_data');
 
-describe('test_datagen.js', async function() {
+describe('generators/test_data.js', function() {
   describe('createTestSuiteFile()', function() {
     /*
       Should configure the output location before using it for unit testing,
@@ -25,17 +39,17 @@ describe('test_datagen.js', async function() {
 
   describe('buildTestSuite()', function() {
     const testSuite = buildTestSuite(oasDoc);
-    it('testSuite should contain the OAS 3.0 Document', function() {
+    it('testSuite should contain the oas doc', function() {
       assert.exists(testSuite.oasDoc);
     });
-    it('testSuite should contain the createdAttimestamp', function() {
+    it('testSuite should contain a timestamp', function() {
       assert.exists(testSuite.createdAtTimeStamp);
     });
-    it('testSuite should contain apiTestSuites', function() {
+    it('testSuite should contain api-testsuites', function() {
       assert.exists(testSuite.apiTestSuites);
     });
-    it('apiTestSuite should contains apiEndpoint, examples of request body ' +
-      'and request headers, positive and negative testcases', function() {
+    it('apiTestSuite should contains apiEndpoint info, '+
+      'request-body/headers examples, testcases', function() {
       const apiTestSuite = testSuite.apiTestSuites[0];
       assert.exists(apiTestSuite.apiEndpoint);
       assert.exists(apiTestSuite.examples.requestBody);
@@ -46,11 +60,10 @@ describe('test_datagen.js', async function() {
   });
 
   describe('getPostitveTestCaseForRequestBody()', function() {
-    const positiveTestCaseForRequestBody =
-      getPostitveTestCaseForRequestBody(
-          schema,
-          {testForRequestBody: true});
-    it('testcase generated should contain the requestBody', function() {
+    const positiveTestCaseForRequestBody = getPostitveTestCaseForRequestBody(
+        Schemas.SIMPLE, {testForRequestBody: true});
+    it('testcase generated should contain data which corresponds to the ' +
+        'requestBody', function() {
       positiveTestCaseForRequestBody.forEach(function(testCase) {
         assert.exists(testCase.data);
       });
@@ -64,11 +77,10 @@ describe('test_datagen.js', async function() {
   });
 
   describe('getNegativeTestCaseForRequestBody()', function() {
-    const negativeTestCaseForRequestBody =
-      getNegativeTestCaseForRequestBody(
-          schema,
-          {testForRequestBody: true});
-    it('testcase generated should contain the requestBody', function() {
+    const negativeTestCaseForRequestBody = getNegativeTestCaseForRequestBody(
+        Schemas.SIMPLE, {testForRequestBody: true});
+    it('testcase generated should contain data which corresponds to the ' +
+        'requestBody', function() {
       negativeTestCaseForRequestBody.forEach(function(testCase) {
         assert.exists(testCase.data);
       });
@@ -84,10 +96,10 @@ describe('test_datagen.js', async function() {
   describe('getPostitveTestCaseForRequestHeader()', function() {
     const positiveTestCaseForRequestHeader =
       getPostitveTestCaseForRequestHeader(
-          parameters,
+          Schemas.PARAMETERS,
           {testForRequestHeader: true});
-    it('testcase generated should contain name of the header under test' +
-      ' consideration and the requestHeader', function() {
+    it('testcase generated should contain name of the header parameter under' +
+      ' test and data that corresponds to the requestHeader', function() {
       positiveTestCaseForRequestHeader.forEach(function(testCase) {
         assert.exists(testCase.data);
         assert.exists(testCase.headerName);
@@ -104,10 +116,10 @@ describe('test_datagen.js', async function() {
   describe('getNegativeTestCaseForRequestHeader()', function() {
     const negativeTestCaseForRequestHeader =
       getNegativeTestCaseForRequestHeader(
-          parameters,
+          Schemas.PARAMETERS,
           {testForRequestHeader: true});
-    it('testcase generated should contain name of the header under test' +
-      ' consideration and the requestHeader', function() {
+    it('testcase generated should contain name of the header parameter under' +
+      ' test and data that corresponds to  requestHeader', function() {
       negativeTestCaseForRequestHeader.forEach(function(testCase) {
         assert.exists(testCase.data);
         assert.exists(testCase.headerName);
