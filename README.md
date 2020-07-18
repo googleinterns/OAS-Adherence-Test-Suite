@@ -161,7 +161,9 @@ need to provide all the options everytime they want to run a command, they can s
 ```bash
   npm run generate-docs
 ```
-**Highly recommended for new contributors of the app to generate the doc and get an overview of all modules present.** 
+**Highly recommended for new contributors of the app to generate the doc and get an overview of all modules present.**
+ 
+#### Few Snapshots of the generated doc:
 
 ## Source Code Headers
 
