@@ -16,7 +16,7 @@
 
 /** @module cli/prompts */
 /**
- * @fileoverview contains functions that prompts the user with questions
+ * @fileoverview Contains functions that prompts the user with questions
  * and returns the user's response.
  */
 
@@ -33,19 +33,19 @@ const BaseConfig = {
   oasPath: {
     type: 'input',
     name: 'oasPath',
-    message: 'oas document path',
+    message: 'OAS Document Path',
     validate: function(path) {
       return (isValidJSONFile(path)) ? true :
-        'Please enter a valid path for oas 3.0 document';
+        'Please enter a valid path for OAS 3.0 document.';
     },
   },
   testSuitePath: {
     type: 'input',
     name: 'testSuitePath',
-    message: 'path of testsuite file',
+    message: 'Path of Testsuite file',
     validate: function(path) {
       return (isValidJSONFile(path)) ? true :
-        'Please enter a valid path for testsuite file';
+        'Please enter a valid path for Testsuite file.';
     },
   },
   path: {
@@ -55,12 +55,12 @@ const BaseConfig = {
   fileType: {
     type: 'list',
     name: 'fileType',
-    message: 'choose an input file type',
+    message: 'Choose an Input-file type',
   },
   apiEndpoints: {
     type: 'checkbox',
     name: 'apiEndpoints',
-    message: 'select api endpoints',
+    message: 'Select Api Endpoints',
   },
   apiKey: {
     type: 'input',
@@ -86,12 +86,12 @@ const BaseConfig = {
   upsertConfig: {
     type: 'confirm',
     name: 'upsertConfig',
-    message: 'want to update/create config file',
+    message: 'Want to update/create Config File',
   },
   configFilePath: {
     type: 'input',
     name: 'configFilePath',
-    message: 'config file path',
+    message: 'Config File Path',
   },
 };
 

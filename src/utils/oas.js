@@ -16,7 +16,7 @@
 
 /** @module utils/oas */
 /**
- * @fileoverview contains util functions scoped to oas.
+ * @fileoverview Contains util functions scoped to OpenApi Spec (OAS).
  */
 
 const {logger} = require('../log');
@@ -45,6 +45,29 @@ function getApiEndpoints(oasDoc) {
 }
 
 /**
+ * Verifies whether all the apiEndpoints are of 'post' httpMethod.
+ * In case, if there are apiEndpoints which are not of 'post' httpMethod,
+ * it will warn the user through logs and skip the apiEndpoint for testing.
+ * @param {array<{httpMethod: string, path: string}>} apiEndpoints
+ */
+function verifyApiEndpoints(apiEndpoints) {
+  const skipApiEndpoints = [];
+  apiEndpoints.forEach(function({path, httpMethod}, index) {
+    if (httpMethod !== 'post') {
+      skipApiEndpoints.push({path, httpMethod});
+      apiEndpoints.splice(index, 1);
+    }
+  });
+  if (skipApiEndpoints.length) {
+    skipApiEndpoints.forEach(function({path, httpMethod}) {
+      logger.warn(`Skipping tests for httpMethod: ${httpMethod}`.red +
+        `, path: ${path}`.red);
+    });
+    logger.warn('ats supports only post requests.'.gray.bold);
+  }
+}
+
+/**
  * Validates the OAS 3.0 document and resolves all the $ref pointers and
  * returns a de-referenced OAS 3.0 Documentation.
  * @param {object} oasDoc OAS 3.0 Document.
@@ -53,7 +76,7 @@ function getApiEndpoints(oasDoc) {
 async function parseOASDoc(oasDoc) {
   try {
     const parsedOASDoc = await SwaggerParser.validate(oasDoc);
-    logger.verbose('\nOAS 3.0 Document parsed successfully\n'.magenta);
+    logger.verbose('OAS 3.0 Document parsed successfully.'.magenta);
     return parsedOASDoc;
   } catch (err) {
     logger.error('OAS 3.0 Document Parse Failed!! '.red);
@@ -63,5 +86,6 @@ async function parseOASDoc(oasDoc) {
 
 module.exports = {
   getApiEndpoints,
+  verifyApiEndpoints,
   parseOASDoc,
 };

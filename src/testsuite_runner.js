@@ -16,7 +16,7 @@
 
 /** @module testsuite_runner */
 /**
- * @fileoverview contains functions that runs testsuite and display test summary
+ * @fileoverview Contains functions that runs testsuite and display test summary
  */
 
 // eslint-disable-next-line no-unused-vars
@@ -33,7 +33,7 @@ const testVerdictCounter = {
 };
 
 /**
- * resets the testverdict counter
+ * Resets the testverdict counter.
  */
 function resetTestVerdictCounter() {
   testVerdictCounter.pass = 0;
@@ -41,7 +41,7 @@ function resetTestVerdictCounter() {
 }
 
 /**
- * displays test summary
+ * Displays test summary.
  */
 function displayTestSummary() {
   logger.info('\nTest Summary '.grey.bold);

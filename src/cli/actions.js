@@ -16,14 +16,13 @@
 
 /** @module cli/actions */
 /**
- * @fileoverview contains functions/actions that are triggered by a command.
+ * @fileoverview Contains functions/actions that are triggered by a command.
  */
 
 // eslint-disable-next-line no-unused-vars
 const colors = require('colors');
 const {logger} = require('../log');
 const {loadTestParameters} = require('../testparameters');
-const {parseOASDoc} = require('../utils/oas');
 const {
   createTestSuiteFile,
   buildTestSuite,
@@ -31,18 +30,19 @@ const {
 const {runTestSuite} = require('../testsuite_runner');
 const {buildConfig, getConfig, upsertConfig} = require('../utils/config');
 const {readFile} = require('../utils/app');
+const {parseOASDoc, verifyApiEndpoints} = require('../utils/oas');
 const {BaseConfig, prompt} = require('./prompts');
 
 /**
- * generates testsuite and creates a testSuite file in the path specified
+ * Generates testsuite and creates a testSuite file in the path specified
  * by the user.
  * @param {object} options options of the command 'generate'
  */
 async function generateTestSuite(options = {}) {
   if (options.verbose) {
     /*
-      overwrite the level of logger object to 'verbose'.
-      Reason: To provide extensive information/logs to the user.
+      Overwrites the level of logger object to 'verbose' to provide extensive
+      information/logs to the user.
     */
     logger.level = 'verbose';
   }
@@ -78,15 +78,15 @@ async function generateTestSuite(options = {}) {
 }
 
 /**
- * validates api endpoints by loading the test parameters and
+ * Validates api endpoints by loading the test parameters and
  * triggering the testrunner.
- * @param {object} options options of the command 'validate'
+ * @param {object} options Options of the command 'validate'
  */
 async function validateApiEndpoints(options = {}) {
   if (options.verbose) {
     /*
-      overwrite the level of logger object to 'verbose'.
-      Reason: To provide extensive information/logs to the user.
+      Overwrites the level of logger object to 'verbose' to provide extensive
+      information/logs to the user.
     */
     logger.level = 'verbose';
   }
@@ -100,23 +100,24 @@ async function validateApiEndpoints(options = {}) {
   if (overridesPath) overrides = readFile(overridesPath, 'Overrides');
   if (!overrides) return;
 
+  let apiEndpoints;
+  if (options.apiendpoints) {
+    try {
+      apiEndpoints = JSON.parse(options.apiendpoints);
+      verifyApiEndpoints(apiEndpoints);
+    } catch (err) {
+      logger.error('Invalid apiendpoints'.red);
+      return;
+    }
+  }
+
   const oasPath = options.oaspath;
   if (oasPath) {
     let oasDoc = readFile(oasPath, 'OAS 3.0 Document');
     oasDoc = await parseOASDoc(oasDoc);
     if (!oasDoc) return;
-    testSuite = buildTestSuite(oasDoc, overrides);
-    logger.verbose('Testsuite created successfully.\n'.magenta);
-  }
-
-  let apiEndpoints = options.apiendpoints;
-  if (apiEndpoints) {
-    try {
-      apiEndpoints = JSON.parse(apiEndpoints);
-    } catch (err) {
-      logger.error('invalid api endpoints'.red);
-      return;
-    }
+    testSuite = buildTestSuite(oasDoc, apiEndpoints, overrides);
+    logger.verbose('Testsuite created successfully.'.magenta);
   }
 
   let apiKeys = options.apikeys;
@@ -124,7 +125,7 @@ async function validateApiEndpoints(options = {}) {
     try {
       apiKeys = JSON.parse(apiKeys);
     } catch (err) {
-      logger.error('invalid apikeys'.red);
+      logger.error('Invalid apikeys.'.red);
       return;
     }
   }
@@ -134,7 +135,7 @@ async function validateApiEndpoints(options = {}) {
     try {
       basicAuth = JSON.parse(basicAuth);
     } catch (err) {
-      logger.error('invalid basic auth credentials'.red);
+      logger.error('Invalid basicauth.'.red);
       return;
     }
   }
@@ -157,10 +158,10 @@ async function validateApiEndpoints(options = {}) {
 
   try {
     await loadTestParameters(testSuite, baseURL, apiEndpoints, apiKeys,
-        basicAuth, timeout, config);
+        basicAuth, timeout, overrides, config);
   } catch (err) {
     logger.error(JSON.stringify(err).red);
-    logger.error('Failed loading test parameters.');
+    logger.error('Failed loading test parameters.'.red);
     return;
   }
   runTestSuite();

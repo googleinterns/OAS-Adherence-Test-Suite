@@ -27,10 +27,11 @@ const lodash = require('lodash');
 const os = require('os');
 const {BaseConfig, prompt} = require('./cli/prompts');
 const {upsertConfig} = require('./utils/config');
-const {getApiEndpoints, parseOASDoc} = require('./utils/oas');
+const {getApiEndpoints, verifyApiEndpoints, parseOASDoc} =
+  require('./utils/oas');
 const {isValidJSONFile, getJSONData} = require('./utils/app');
 const {buildTestSuite} = require('./generators/test_data');
-const {getApiKeyList, isBasicAuthRequired} = require('./auth');
+const {getApiKeyList, isBasicAuthRequired} = require('./utils/auth');
 
 /* Supported Input File Types*/
 const FileType = {
@@ -52,14 +53,15 @@ const FileType = {
  * options by the user.
  * @param {object} testSuite testsuite object
  * @param {string} baseURL baseURL of the api endpoints
- * @param {Array< {httpMethod: String, path: String} >} apiEndpoints
- * @param {array<{name:string, value: string}>} apiKeys
+ * @param {array<{httpMethod: string, path: string}>} apiEndpoints
+ * @param {array<{name: string, value: string}>} apiKeys
  * @param {object} basicAuth
- * @param {number} timeout maximum request-duration
+ * @param {number} timeout Maximum request-duration
+ * @param {object} [overrides = {}] Keys and their overridden values.
  * @param {object} config config object
  */
 async function loadTestParameters(testSuite, baseURL, apiEndpoints,
-    apiKeys = [], basicAuth, timeout, config = {}) {
+    apiKeys = [], basicAuth, timeout, overrides = {}, config = {}) {
   /*
     newConfigs contains configs/credentials that are prompted and received from
     the user as they are necessary for the execution of testsuite.
@@ -71,7 +73,7 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
 
   if (config.testSuitePath && isValidJSONFile(config.testSuitePath)) {
     testParams.testSuite = getJSONData(config.testSuitePath);
-    logger.verbose('TestSuite uploaded successfully from config'.magenta);
+    logger.verbose('TestSuite uploaded successfully from configs.'.magenta);
   }
   testParams.testSuite = testSuite || testParams.testSuite;
 
@@ -90,7 +92,7 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
           };
           throw errorObject;
         }
-        testParams.testSuite = buildTestSuite(oasDoc);
+        testParams.testSuite = buildTestSuite(oasDoc, apiEndpoints, overrides);
         const defualtTestSuitePath = os.homedir() +
             snakeCase(`/testsuite ${new Date().toDateString()}`);
         /*
@@ -110,7 +112,7 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
       case FileType.TESTSUITE_FILE: {
         const response = await prompt([BaseConfig.testSuitePath]);
         testParams.testSuite = getJSONData(response.testSuitePath);
-        logger.verbose('testSuite uploaded successfully.'.magenta);
+        logger.verbose('TestSuite uploaded successfully.'.magenta);
         newConfigs.testSuitePath = response.testSuitePath;
         break;
       }
@@ -130,6 +132,7 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
   testParams.apiEndpointsToTest = apiEndpoints || config.apiEndpoints;
   if (!testParams.apiEndpointsToTest) {
     const allApiEndpoints = getApiEndpoints(oasDoc);
+    verifyApiEndpoints(allApiEndpoints);
     const allApiEndpointsString = allApiEndpoints.map(function(apiEndpoint) {
       return JSON.stringify(apiEndpoint);
     });
@@ -199,7 +202,7 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
   }
 
   module.exports.testParams = testParams;
-  logger.verbose('\nExported test params successfully.');
+  logger.verbose('Exported test params successfully.'.magenta);
 }
 
 /**

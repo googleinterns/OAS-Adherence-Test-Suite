@@ -23,7 +23,7 @@
 
 const fs = require('fs');
 const lodash = require('lodash');
-const {getApiEndpoints} = require('../utils/oas');
+const {getApiEndpoints, verifyApiEndpoints} = require('../utils/oas');
 const {logger} = require('../log');
 const {DataType} = require('../constants');
 const {getMockData, getMockHeaders} = require('./good_data');
@@ -261,10 +261,11 @@ function getNegativeTestCaseForRequestHeader(
 /**
  * Generates testsuite for the oasDoc provided.
  * @param {object} oasDoc OAS 3.0 Document.
+ * @param {array<{httpMethod: string, path: string}>} apiEndpoints
  * @param {object} overrides Keys and their overridden values.
  * @return {object} testSuite
  */
-function buildTestSuite(oasDoc, overrides = {}) {
+function buildTestSuite(oasDoc, apiEndpoints, overrides = {}) {
   const testSuite = {};
   testSuite.createdAtTimeStamp = new Date();
 
@@ -277,7 +278,11 @@ function buildTestSuite(oasDoc, overrides = {}) {
   */
   testSuite.oasDoc = oasDoc;
 
-  const apiEndpoints = getApiEndpoints(oasDoc);
+  if (!apiEndpoints) {
+    apiEndpoints = getApiEndpoints(oasDoc);
+    verifyApiEndpoints(apiEndpoints);
+  }
+
   let apiTestSuites = [];
 
   apiEndpoints.forEach(function({path, httpMethod}) {
@@ -350,7 +355,7 @@ function buildTestSuite(oasDoc, overrides = {}) {
  * @param {object} overrides Keys and their overridden values.
  */
 function createTestSuiteFile(oasDoc, testSuitePath, overrides) {
-  let testSuite = buildTestSuite(oasDoc, overrides);
+  let testSuite = buildTestSuite(oasDoc, null, overrides);
   testSuite = JSON.stringify(testSuite);
   try {
     fs.writeFileSync(testSuitePath, testSuite);

@@ -25,6 +25,11 @@
          "url":"http://petstore.swagger.io/v2"
       }
    ],
+   "security": [
+      {
+         "X-Client-Id": []
+      }
+   ],
    "tags":[
       {
          "name":"pet",
@@ -324,9 +329,9 @@
             "type":"http",
             "scheme":"basic"
          },
-         "api_key":{
+         "X-Client-Id":{
             "type":"apiKey",
-            "name":"api_key",
+            "name":"X-Client-Id",
             "in":"header"
          },
          "petstore_auth":{

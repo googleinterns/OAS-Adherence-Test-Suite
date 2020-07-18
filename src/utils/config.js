@@ -16,7 +16,7 @@
 
 /** @module utils/config */
 /**
- * @fileoverview contains function that can create, fetch, update config.
+ * @fileoverview Contains function that can create, fetch, update config.
  */
 
 const fs = require('fs');
@@ -24,13 +24,13 @@ const {logger} = require('../log');
 const {isValidJSONFile, getJSONData} = require('../utils/app');
 
 /**
- * builds a config object with provided information.
- * @param {string} testSuitePath path of testsuite file
+ * Builds a config object with provided information.
+ * @param {string} testSuitePath Path of testsuite file
  * @param {string} baseURL baseURL of the api endpoints
  * @param {array<{httpMethod: string, path: string}>} apiEndpoints
  * @param {array<{name:string, value: string}>} apiKeys
  * @param {object} basicAuth
- * @param {number} timeout maximum request-duration
+ * @param {number} timeout Maximum request-duration
  * @return {object} config
  */
 function buildConfig(testSuitePath, baseURL, apiEndpoints, apiKeys,
@@ -47,8 +47,8 @@ function buildConfig(testSuitePath, baseURL, apiEndpoints, apiKeys,
 }
 
 /**
- * reads the config object present in config file.
- * @param {string} configPath path of config file.
+ * Reads the config object present in config file.
+ * @param {string} configPath Path of config file.
  * @return {object} config
  */
 function getConfig(configPath) {
@@ -63,16 +63,16 @@ function getConfig(configPath) {
 /**
  * UPdate + inSERT equals upsert which basically updates the config file if
  * already present, else creates a new file with the config object.
- * @param {object} config config object
- * @param {string} configPath path of config file.
+ * @param {object} config Config object
+ * @param {string} configPath Path of config file.
  */
 function upsertConfig(config, configPath) {
   try {
     fs.writeFileSync(configPath, JSON.stringify(config), 'utf8');
     logger.verbose(
-        `\nconfig file updated/created at (${configPath})\n`.magenta);
+        `\nConfig file updated/created at (${configPath})\n`.magenta);
   } catch (err) {
-    logger.error('\nconfig file update/create failed\n'.red);
+    logger.error('Config file update/create failed.'.red);
   }
 }
 
