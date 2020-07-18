@@ -60,10 +60,10 @@ function verifyApiEndpoints(apiEndpoints) {
   });
   if (skipApiEndpoints.length) {
     skipApiEndpoints.forEach(function({path, httpMethod}) {
-      logger.warn(`Skipping tests for httpMethod: ${httpMethod}`.red +
-        `, path: ${path}`.red);
+      logger.warn(`Skipping tests for `.red +
+        ` httpMethod: ${httpMethod.toUpperCase()}, path: ${path}`.red);
     });
-    logger.warn('ats supports only post requests.'.gray.bold);
+    logger.warn('ats supports only POST requests.'.gray.bold);
   }
 }
 

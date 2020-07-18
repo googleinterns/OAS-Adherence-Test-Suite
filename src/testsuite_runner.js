@@ -121,7 +121,8 @@ async function runTestSuite() {
       const {apiEndpoint, testResults} = message;
 
       logger.info('\nTest Results for  '.grey.bold +
-        `${apiEndpoint.httpMethod}  ${baseURL}${apiEndpoint.path}`.cyan);
+        `${apiEndpoint.httpMethod.toUpperCase()} `.cyan +
+        `${baseURL}${apiEndpoint.path}`.cyan);
       displayTestResults(testResults, testVerdictCounter);
 
       activeChildProcesses--;
