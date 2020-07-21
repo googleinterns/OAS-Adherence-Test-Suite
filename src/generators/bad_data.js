@@ -169,8 +169,13 @@ function getDataDeficientByDataType(schema, jsonpath, overrides = {}) {
     deficientDatas.push({
       key: jsonpath,
       data: dummy.data,
-      expectedDataType: schema.type,
-      actualDataType: dummy.type,
+      deficiency: {
+        type: 'DataType',
+        details: {
+          expectedDataType: schema.type,
+          actualDataType: dummy.type,
+        },
+      },
     });
   });
   return deficientDatas;
@@ -207,7 +212,12 @@ function getDataDeficientByEnum(schema, jsonpath, overrides = {}) {
         deficientDatas.push({
           key: jsonpath,
           data: dummy.data,
-          enumList: schema.enum,
+          deficiency: {
+            type: 'Enum',
+            details: {
+              enumList: schema.enum,
+            },
+          },
         });
       }
     });
@@ -252,14 +262,24 @@ function getDataDeficientByNumberLimit(schema, jsonpath, overrides = {},
       deficientData.push({
         key: jsonpath,
         data: schema.minimum - 1,
-        minimumAllowed: schema.minimum,
+        deficiency: {
+          type: 'Number Range',
+          details: {
+            minimumAllowed: schema.minimum,
+          },
+        },
       });
     }
     if (options.checkMaximum && schema.maximum) {
       deficientData.push({
         key: jsonpath,
         data: schema.maximum + 1,
-        maximumAllowed: schema.maximum,
+        deficiency: {
+          type: 'Number Range',
+          details: {
+            maximumAllowed: schema.maximum,
+          },
+        },
       });
     }
     deficientDatas = deficientDatas.concat(deficientData);
@@ -296,8 +316,11 @@ function getDataDeficientByOptionalKey(schema, jsonpath, overrides = {}) {
         const data = getMockData(schema, jsonpath, overrides);
         delete data[key];
         deficientDatas.push({
+          key: `${jsonpath}.${key}`,
           data,
-          missingOptionalKey: `${jsonpath}.${key}`,
+          deficiency: {
+            type: 'Optional Key Missing',
+          },
         });
       }
     });
@@ -334,8 +357,11 @@ function getDataDeficientByRequiredKey(schema, jsonpath, overrides = {}) {
         const data = getMockData(schema, jsonpath, overrides);
         delete data[key];
         deficientDatas.push({
+          key: `${jsonpath}.${key}`,
           data,
-          missingRequiredKey: `${jsonpath}.${key}`,
+          deficiency: {
+            type: 'Required Key Missing',
+          },
         });
       }
     });
@@ -379,14 +405,24 @@ function getDataDeficientByStringLength(schema, jsonpath, overrides = {},
       deficientDatas.push({
         key: jsonpath,
         data: getRandomString(schema.minLength-1),
-        minimumLengthAllowed: schema.minLength,
+        deficiency: {
+          type: 'String Length',
+          details: {
+            minimumLengthAllowed: schema.minLength,
+          },
+        },
       });
     }
     if (options.checkMaximumLength && schema.maxLength) {
       deficientDatas.push({
         key: jsonpath,
         data: getRandomString(schema.maxLength+1),
-        maximumLengthAllowed: schema.maxLength,
+        deficiency: {
+          type: 'String Length',
+          details: {
+            maximumLengthAllowed: schema.maxLength,
+          },
+        },
       });
     }
   }
