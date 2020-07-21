@@ -73,7 +73,7 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
 
   if (config.testSuitePath && isValidJSONFile(config.testSuitePath)) {
     testParams.testSuite = getJSONData(config.testSuitePath);
-    logger.verbose('TestSuite uploaded successfully from configs.'.magenta);
+    logger.verbose('TestSuite uploaded successfully from config.'.magenta);
   }
   testParams.testSuite = testSuite || testParams.testSuite;
 
@@ -87,8 +87,8 @@ async function loadTestParameters(testSuite, baseURL, apiEndpoints,
         oasDoc = await parseOASDoc(oasDoc);
         if (!oasDoc) {
           const errorObject = {
-            'Error Type': 'oas doc parse fail',
-            'Error Message': 'invalid oas 3.0 document',
+            'Error Type': 'OAS Doc Parse Fail',
+            'Error Message': 'Invalid OAS 3.0 Document',
           };
           throw errorObject;
         }

@@ -63,7 +63,7 @@ function verifyApiEndpoints(apiEndpoints) {
       logger.warn(`Skipping tests for `.red +
         ` httpMethod: ${httpMethod.toUpperCase()}, path: ${path}`.red);
     });
-    logger.warn('ats supports only POST requests.'.gray.bold);
+    logger.warn('ATS supports only POST requests.'.gray.bold);
   }
 }
 
