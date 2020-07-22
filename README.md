@@ -144,14 +144,14 @@ need to provide all the options everytime they want to run a command, they can s
 
 ## Developer Guide
 
-### Run Unit Tests.
+### Run Unit Tests
 
 ```bash 
   npm test
 ```
 **Note**:  On running the command, along with running the tests it will generate the code-coverage report as well. 
 
-### Generate Documentation for the source code.
+### Generate Documentation for the Source Code
 ```bash
   npm run generate-docs
 ```
