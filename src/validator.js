@@ -22,6 +22,7 @@
 
 const validator = require('validator');
 const ipRegex = require('ip-regex');
+const isNumber = require('is-number');
 const {SchemaFormat, DataType, Error} = require('./constants');
 const {buildError} = require('./utils/app');
 const {logger} = require('./log');
@@ -78,7 +79,7 @@ function validateNumericAgainstSchema(data, schema, jsonpath, options = {}) {
     return buildError(Error.DATA_TYPE, data, jsonpath,
         {dataType: {present: typeof(data), expected: DataType.INTEGER}});
   }
-  if (schema.type === DataType.NUMBER && isNaN(data)) {
+  if (schema.type === DataType.NUMBER && !isNumber(data)) {
     return buildError(Error.DATA_TYPE, data, jsonpath,
         {dataType: {present: typeof(data), expected: DataType.NUMBER}});
   }
