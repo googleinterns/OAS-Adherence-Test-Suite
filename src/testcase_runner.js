@@ -44,13 +44,65 @@ axiosRetry(axios, {retries: 3, retryCondition: function(err) {
 }});
 
 /**
+ * Creates log statement which provides information about the testCase.
+ * @param {object} testCase
+ * @return {string}
+ */
+function testCaseLog(testCase) {
+  const PAD_LENGTH = 20;
+  if (!testCase.deficiency) {
+    return '[Optimal Request Body/Header Check]'.padEnd(PAD_LENGTH).grey.bold;
+  }
+  const DeficiencyType = {
+    dataType: 'DataType',
+    enum: 'Enum',
+    numberRange: 'Number Range',
+    optionalKey: 'Optional Key Missing',
+    requiredKey: 'Required Key Missing',
+    stringLength: 'String Length',
+  };
+  const details = testCase.deficiency.details || {};
+  switch (testCase.deficiency.type) {
+    case DeficiencyType.dataType:
+      return '[DataType Check]'.padEnd(PAD_LENGTH).grey.bold +
+        ` expectedDataType: ${details.expectedDataType},`.grey +
+        ` actualDataType: ${details.actualDataType}`.grey;
+    case DeficiencyType.enum:
+      return '[Enum Check]'.padEnd(PAD_LENGTH).grey.bold +
+        ` enumList: ${details.enumList}`.grey;
+    case DeficiencyType.numberRange:
+      return '[Range Check]'.padEnd(PAD_LENGTH).grey.bold +
+      (details.minimumAllowed) ? `Minimum: ${details.minimumAllowed}`.grey: '' +
+      (details.maximumAllowed) ? `Maximum: ${details.maximumAllowed}`.grey: '';
+    case DeficiencyType.optionalKey:
+      return '[Optional Key Check]'.padEnd(PAD_LENGTH).grey.bold;
+    case DeficiencyType.requiredKey:
+      return '[Required Key Check]'.padEnd(PAD_LENGTH).grey.bold;
+    case DeficiencyType.stringLength:
+      return '[String Length Check]'.padEnd(PAD_LENGTH).grey.bold +
+        (details.minimumLengthAllowed) ?
+        `MinLength: ${details.minimumLengthAllowed}`.grey : '' +
+        (details.maximumLengthAllowed) ?
+        `MaxLength: ${details.maximumLengthAllowed}`.grey: '';
+    default:
+      return '';
+  }
+}
+
+/**
  * Displays test results of each test case with test verdicts, test case
  * details and other details like errors if any.
  * @param {array<object>} testResults
  * @param {object} testVerdictCounter
  */
 function displayTestResults(testResults, testVerdictCounter) {
-  testResults.forEach(function(testResult) {
+  testResults.sort(function(testResultA, testResultB) {
+    const keyA = testResultA.testCase.key;
+    const keyB = testResultB.testCase.key;
+    return keyA.localeCompare(keyB);
+  });
+
+  testResults.forEach(function(testResult, index) {
     const {
       testCase,
       testVerdict,
@@ -58,26 +110,21 @@ function displayTestResults(testResults, testVerdictCounter) {
       statusCodes,
       errors} = testResult;
 
-    /*
-      Filter out unnecessary data from the testcase ,
-      in order to present only the necessary details to the user.
-    */
-    const necessaryTestCaseDetails = testCase;
-    delete necessaryTestCaseDetails.data;
-    delete necessaryTestCaseDetails.testForRequestBody;
+    if (!index || testCase.key !== testResults[index-1].testCase.key) {
+      logger.info('\nTest Details for '.grey.bold + `${testCase.key}`.cyan);
+    }
 
     const verdictLog =
-        ((testVerdict.final === 'pass') ? 'PASS'.green : 'FAIL'.red) + ' ' +
-        JSON.stringify(necessaryTestCaseDetails).grey.bold;
-    const statusCodeLog = 'status codes: ' +
-        `[received: ${statusCodes.received}, ` +
-        `expected: ${JSON.stringify(statusCodes.expected)} ]`;
-    const skipLog = 'skipped' +
+        ((testVerdict.final === 'pass') ? 'PASS'.green : 'FAIL'.red) + ' ';
+    const statusCodeLog = 'Status codes: ' +
+        `[Received: ${statusCodes.received}, ` +
+        `Expected: ${JSON.stringify(statusCodes.expected)} ]`;
+    const skipLog = 'Skipped' +
         (skipValidation.responseBody ? ' [response body]': '') +
         (skipValidation.responseHeaders ? ' [response header]': '') +
         ' validation.';
 
-    logger.info(verdictLog);
+    logger.info(verdictLog + testCaseLog(testCase));
     logger.verbose(statusCodeLog);
     if (skipValidation.responseBody || skipValidation.responseHeaders) {
       logger.verbose(skipLog);

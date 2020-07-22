@@ -314,12 +314,13 @@ function buildTestSuite(oasDoc, apiEndpoints, overrides = {}) {
 
     let positiveTestCases = [];
     /*
-      An empty testcase corresponds to the testcase where both requestheader,
+      Below testcase corresponds to the testcase where both requestheader,
       requestbody are equal to the example requestheader, example requestbody
       respectively. Since, the example requestheader, example requestbody are
       optimal, the testcase expects a success http status code on execution.
     */
-    positiveTestCases.push({});
+    positiveTestCases.push({key: '$', deficiency: null});
+
     positiveTestCases =
       positiveTestCases.concat(getPostitveTestCaseForRequestBody(
           requestBodySchema, {testForRequestBody: true}, requestBodyOverrides));
