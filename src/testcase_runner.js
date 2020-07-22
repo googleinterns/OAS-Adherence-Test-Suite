@@ -16,7 +16,7 @@
 
 /** @module testcase_runner */
 /**
- * @fileoverview contains functions that runs testcases for a particular
+ * @fileoverview Contains functions that runs testcases for a particular
  * api-endpoint, build test-results, display test-results.
  */
 
@@ -39,12 +39,12 @@ axios.defaults.headers.post['Content-Type'] =
 
 const axiosRetry = require('axios-retry');
 axiosRetry(axios, {retries: 3, retryCondition: function(err) {
-  // retry only for requests geting timed out.
+  // Retry only for requests geting timed out.
   return (err.code === 'ECONNABORTED');
 }});
 
 /**
- * displays test results of each test case with test verdicts, test case
+ * Displays test results of each test case with test verdicts, test case
  * details and other details like errors if any.
  * @param {array<object>} testResults
  * @param {object} testVerdictCounter
@@ -214,12 +214,12 @@ function buildTestResults(testCases, responses, expectedStatusCodes,
 }
 
 /**
- * executes testcases and generates test results for a particular api endpoint
+ * Executes testcases and generates test results for a particular api endpoint
  * @param {array<object>} testCases
  * @param {array<string>} expectedStatusCodes
- * @param {object} apiTestSuite  testsuites of an api endpoint
- * @param {object} oasDoc  oas 3.0 document
- * @param {object} axiosConfig contains configs of an axios request
+ * @param {object} apiTestSuite  Testsuites of an api endpoint
+ * @param {object} oasDoc  OAS 3.0 document
+ * @param {object} axiosConfig Contains configs of an axios request
  */
 async function runTestCase(testCases, expectedStatusCodes,
     apiTestSuite, oasDoc, axiosConfig) {

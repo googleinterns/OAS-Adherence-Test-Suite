@@ -16,7 +16,7 @@
 
 /** @module utils/app */
 /**
- * @fileoverview contains generic utility functions which is not scoped
+ * @fileoverview Contains generic utility functions which is not scoped
  * to a particular feature/domain. In other words, it is scoped to
  * the whole app.
  */
@@ -58,7 +58,7 @@ function getRandomString(length) {
 }
 
 /**
- * returns a string with lowercase string with underscores between words.
+ * Returns a string with lowercase string with underscores between words.
  * @param {string} sentence
  * @return {string} snake-cased sentence
  */
@@ -90,13 +90,14 @@ function overridden(jsonpath, overrides = {}) {
  * @return {boolean}
  */
 function isValidJSONFile(path) {
+  let isValid = true;
   try {
     const jsonObject = fs.readFileSync(path, 'utf8');
     JSON.parse(jsonObject);
-    return true;
   } catch (err) {
-    return false;
+    isValid = false;
   }
+  return isValid;
 }
 
 /**
@@ -119,7 +120,7 @@ function readFile(path, fileName) {
   if (isValidJSONFile(path)) {
     const file = getJSONData(path);
     logger.verbose(
-        `Uploaded ${fileName} successfully from ${path}.\n`.magenta);
+        `Uploaded ${fileName} successfully from ${path}.`.magenta);
     return file;
   } else {
     logger.error(`${fileName} upload failed.`.red);
