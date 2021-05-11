@@ -27,7 +27,7 @@
     "json-schema-ref-parser": "^9.0.1",
     "jsonpath-plus": "^4.0.0",
     "jsonschema": "^1.2.6",
-    "lodash": "^4.17.19",
+    "lodash": "^4.17.21",
     "mocha": "^7.2.0",
     "randexp": "^0.5.3",
     "swagger-parser": "^9.0.1",
