@@ -16,7 +16,7 @@
     "chai": "^4.2.0",
     "colors": "^1.4.0",
     "commander": "^5.1.0",
-    "eslint": "^7.2.0",
+    "eslint": "^9.26.0",
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-vue": "^6.2.2",
     "faker": "^4.1.0",
